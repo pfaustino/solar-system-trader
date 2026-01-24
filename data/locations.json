@@ -5,7 +5,7 @@
             "name": "Mercury Station",
             "type": "mining",
             "position": {
-                "x": 800,
+                "x": 8000,
                 "y": 0,
                 "z": 0
             },
@@ -24,9 +24,9 @@
             "name": "Venus Cloud City",
             "type": "refinery",
             "position": {
-                "x": 1200,
-                "y": 200,
-                "z": 100
+                "x": 12000,
+                "y": 2000,
+                "z": 1000
             },
             "dangerLevel": 1,
             "exports": [
@@ -43,9 +43,9 @@
             "name": "Earth Orbital",
             "type": "hub",
             "position": {
-                "x": 1600,
+                "x": 16000,
                 "y": 0,
-                "z": -50
+                "z": -500
             },
             "dangerLevel": 0,
             "exports": [
@@ -64,8 +64,8 @@
             "name": "Luna Base",
             "type": "industrial",
             "position": {
-                "x": 1650,
-                "y": 50,
+                "x": 16500,
+                "y": 500,
                 "z": 0
             },
             "dangerLevel": 0,
@@ -83,9 +83,9 @@
             "name": "Mars Colony",
             "type": "settlement",
             "position": {
-                "x": 2200,
-                "y": -100,
-                "z": 200
+                "x": 22000,
+                "y": -1000,
+                "z": 2000
             },
             "dangerLevel": 1,
             "exports": [
@@ -102,7 +102,7 @@
             "name": "Asteroid Belt Depot",
             "type": "mining",
             "position": {
-                "x": 3500,
+                "x": 35000,
                 "y": 0,
                 "z": 0
             },
@@ -122,9 +122,9 @@
             "name": "Jupiter Station",
             "type": "gas_harvest",
             "position": {
-                "x": 5000,
-                "y": 300,
-                "z": -200
+                "x": 50000,
+                "y": 3000,
+                "z": -2000
             },
             "dangerLevel": 2,
             "exports": [
@@ -142,9 +142,9 @@
             "name": "Europa Outpost",
             "type": "research",
             "position": {
-                "x": 5100,
-                "y": 250,
-                "z": -150
+                "x": 51000,
+                "y": 2500,
+                "z": -1500
             },
             "dangerLevel": 2,
             "exports": [
@@ -161,9 +161,9 @@
             "name": "Saturn Rings",
             "type": "mining",
             "position": {
-                "x": 7000,
-                "y": -200,
-                "z": 400
+                "x": 70000,
+                "y": -2000,
+                "z": 4000
             },
             "dangerLevel": 3,
             "exports": [
@@ -181,9 +181,9 @@
             "name": "Titan Refinery",
             "type": "industrial",
             "position": {
-                "x": 7200,
-                "y": -150,
-                "z": 450
+                "x": 72000,
+                "y": -1500,
+                "z": 4500
             },
             "dangerLevel": 3,
             "exports": [
@@ -200,9 +200,9 @@
             "name": "Uranus Platform",
             "type": "remote",
             "position": {
-                "x": 10000,
-                "y": 100,
-                "z": -500
+                "x": 100000,
+                "y": 1000,
+                "z": -5000
             },
             "dangerLevel": 4,
             "exports": [
@@ -219,9 +219,9 @@
             "name": "Neptune Haven",
             "type": "smuggler",
             "position": {
-                "x": 12000,
-                "y": -300,
-                "z": 600
+                "x": 120000,
+                "y": -3000,
+                "z": 6000
             },
             "dangerLevel": 5,
             "exports": [
@@ -237,9 +237,9 @@
             "name": "Pluto Station",
             "type": "edge",
             "position": {
-                "x": 15000,
-                "y": 500,
-                "z": -800
+                "x": 150000,
+                "y": 5000,
+                "z": -8000
             },
             "dangerLevel": 4,
             "exports": [

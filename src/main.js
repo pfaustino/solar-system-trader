@@ -92,7 +92,7 @@ class Main {
             60,
             window.innerWidth / window.innerHeight,
             0.1,
-            50000
+            500000 // Increased Far Plane 10x
         );
         this.camera.position.set(0, 10, 30);
 
@@ -146,7 +146,7 @@ class Main {
     }
 
     createStarfield() {
-        const starCount = 10000;
+        const starCount = 30000; // Increased count for larger volume
 
         // 1. Static Points (Background)
         const pointsGeo = new THREE.BufferGeometry();
@@ -155,8 +155,8 @@ class Main {
 
         for (let i = 0; i < starCount; i++) {
             const i3 = i * 3;
-            // Random positions in a large sphere
-            const radius = 20000 + Math.random() * 20000;
+            // Random positions in a large sphere (rescaled 10x)
+            const radius = 200000 + Math.random() * 200000; // 200k to 400k radius
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
 
@@ -243,12 +243,12 @@ class Main {
 
         // Sun (PointLight radiating from the center)
         // High intensity and distance for solar system scale
-        const sun = new THREE.PointLight(0xffffcc, 2.5, 50000, 0.5);
+        const sun = new THREE.PointLight(0xffffcc, 2.5, 500000, 0.5); // 500k range
         sun.position.set(0, 0, 0);
         this.scene.add(sun);
 
         // Sun glow (Visual only)
-        const sunGeo = new THREE.SphereGeometry(200, 32, 32);
+        const sunGeo = new THREE.SphereGeometry(2000, 32, 32); // Larger sun visual
         const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
         const sunMesh = new THREE.Mesh(sunGeo, sunMat);
         this.scene.add(sunMesh);

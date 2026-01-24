@@ -60,6 +60,11 @@ export class Game {
         this.waypointsContainer = document.getElementById('waypoints');
         this.radarBlips = [];
         this.waypointElements = new Map();
+
+        // HUD Status Bars
+        this.hudHullBar = document.getElementById('hull-bar');
+        this.hudShieldBar = document.getElementById('shield-bar');
+        this.hudFuelBar = document.getElementById('fuel-bar');
     }
 
     async init() {
@@ -788,13 +793,59 @@ export class Game {
 
         // Update stats
         if (this.playerShip) {
-            document.getElementById('ui-fuel').textContent = '100'; // Placeholder
+            document.getElementById('ui-credits').textContent = Math.floor(this.credits);
+            document.getElementById('ui-cargo').textContent = `${this.cargo.length}/${this.cargoMax}`;
+            document.getElementById('ui-fuel').textContent = `${Math.floor(this.playerShip.fuel)}/${this.playerShip.maxFuel}`;
             document.getElementById('ui-hull').textContent = `${Math.floor(this.playerShip.hull)}/${Math.floor(this.playerShip.maxHull)}`;
         }
+
+        // Action Buttons
+        const refuelBtn = document.getElementById('refuel-btn');
+        const repairBtn = document.getElementById('repair-btn');
+
+        // Remove old listeners to avoid duplicates (basic way, or just use onclick)
+        refuelBtn.replaceWith(refuelBtn.cloneNode(true));
+        repairBtn.replaceWith(repairBtn.cloneNode(true));
+
+        // Re-select fresh nodes
+        const newRefuel = document.getElementById('refuel-btn');
+        const newRepair = document.getElementById('repair-btn');
+
+        // Dynamic Refuel Logic
+        const fuelPrice = this.tradeManager.prices.get(this.dockedAt.data.id)?.get('fuel') || 30;
+        // Refuel cost: 1/100th of commodity price per unit
+        const pricePerUnit = fuelPrice / 100;
+        const neededFuel = Math.floor(this.playerShip.maxFuel - this.playerShip.fuel);
+        const refuelCost = Math.ceil(neededFuel * pricePerUnit);
+
+        newRefuel.textContent = neededFuel > 0 ? `Refuel Ship (${Math.max(1, refuelCost)}cr)` : `Fuel Tank Full`;
+        newRefuel.disabled = (neededFuel <= 0 || this.credits < refuelCost);
+
+        newRefuel.addEventListener('click', () => {
+            const cost = Math.max(1, Math.ceil((Math.floor(this.playerShip.maxFuel - this.playerShip.fuel)) * (this.tradeManager.prices.get(this.dockedAt.data.id)?.get('fuel') / 100 || 0.3)));
+            if (this.credits >= cost && this.playerShip.fuel < this.playerShip.maxFuel) {
+                this.credits -= cost;
+                this.playerShip.fuel = this.playerShip.maxFuel;
+                this.audioManager.playUIBeep();
+                this.updateStationUI();
+                this.updateHUD();
+            }
+        });
+
+        newRepair.addEventListener('click', () => {
+            const cost = 50;
+            if (this.credits >= cost && this.playerShip.hull < this.playerShip.maxHull) {
+                this.credits -= cost;
+                this.playerShip.hull = Math.min(this.playerShip.hull + 25, this.playerShip.maxHull); // Repair 25
+                this.audioManager.playUIBeep();
+                this.updateStationUI();
+                this.updateHUD();
+            }
+        });
     }
 
     updateHUD() {
-        this.hudCredits.textContent = this.credits.toLocaleString();
+        this.hudCredits.textContent = Math.floor(this.credits);
         this.hudCargo.textContent = this.cargo.length;
         this.hudCargoMax.textContent = this.cargoMax;
 
@@ -802,7 +853,18 @@ export class Game {
         this.hudLocation.textContent = location ? location.name : 'Unknown';
 
         if (this.playerShip) {
-            this.hudSpeed.textContent = Math.floor(this.playerShip.velocity.length());
+            // Speed
+            const speed = Math.floor(this.playerShip.velocity.length() / 10);
+            this.hudSpeed.textContent = speed;
+
+            // Stats
+            const hullPct = (this.playerShip.hull / this.playerShip.maxHull) * 100;
+            const shieldPct = (this.playerShip.shield / this.playerShip.maxShield) * 100;
+            const fuelPct = (this.playerShip.fuel / this.playerShip.maxFuel) * 100;
+
+            this.hudHullBar.style.width = `${Math.max(0, hullPct)}%`;
+            this.hudShieldBar.style.width = `${Math.max(0, shieldPct)}%`;
+            this.hudFuelBar.style.width = `${Math.max(0, fuelPct)}%`;
         }
     }
 }

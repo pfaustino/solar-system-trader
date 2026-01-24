@@ -24,6 +24,10 @@ export class Ship {
         this.shieldRechargeRate = 5;
         this.shieldRechargeDelay = 0;
 
+        this.maxFuel = 1000;
+        this.fuel = this.maxFuel;
+        this.fuelConsumption = 5; // Units per second at full thrust
+
         this.weaponDamage = 10 + (data.combat * 5);
         this.fireRate = 0.2; // Seconds
         this.fireCooldown = 0;
@@ -98,6 +102,16 @@ export class Ship {
         let accel = this.acceleration * direction * delta;
         if (this.boosting && direction > 0) {
             accel *= this.boostMultiplier;
+            // Boost consumes more fuel
+            if (this.fuel > 0) this.fuel -= this.fuelConsumption * 2 * delta;
+        } else if (direction !== 0) {
+            if (this.fuel > 0) this.fuel -= this.fuelConsumption * delta;
+        }
+
+        // If out of fuel, reduce thrust efficacy
+        if (this.fuel <= 0) {
+            this.fuel = 0;
+            accel *= 0.1; // Limp mode
         }
 
         this.velocity.add(forward.multiplyScalar(accel));
@@ -158,10 +172,14 @@ export class Ship {
         this.mesh.position.add(this.velocity.clone().multiplyScalar(delta));
 
         // Apply drag (Use delta for frame-rate independence)
-        // Drag equation: F = -coefficient * v
-        // New velocity = v * (1 - drag * delta)
         const dragFactor = Math.pow(0.5, delta); // Lose 50% speed per second
         this.velocity.multiplyScalar(dragFactor);
+
+        // Fuel Consumption logic
+        // We don't have direct access to "thrusting" boolean here easily unless we store it or check acceleration?
+        // Actually Game.js calls thrust(). Let's add fuel drain there instead?
+        // Or just drain if velocity is high? No, that's bad for drifting.
+        // Let's handle fuel drain in thrust() method.
 
         // Cooldowns
         if (this.fireCooldown > 0) this.fireCooldown -= delta;

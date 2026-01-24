@@ -14,9 +14,36 @@
 
         <!-- HUD -->
         <div id="hud">
-            <div id="credits">Credits: <span id="credits-value">1000</span></div>
-            <div id="cargo">Cargo: <span id="cargo-value">0</span>/<span id="cargo-max">20</span></div>
-            <div id="location">Location: <span id="location-value">Earth Orbital</span></div>
+            <!-- Top Left: Econ & Nav -->
+            <div id="info-panel">
+                <div id="credits">Credits: <span id="credits-value">1000</span></div>
+                <div id="location">Loc: <span id="location-value">Earth Orbital</span></div>
+            </div>
+
+            <!-- Bottom Left: Ship Status -->
+            <div id="ship-stats">
+                <div class="stat-bar-container">
+                    <div class="stat-label">HULL</div>
+                    <div class="stat-bar-bg">
+                        <div id="hull-bar" class="stat-bar-fill" style="width: 100%; background: #f00;"></div>
+                    </div>
+                </div>
+                <div class="stat-bar-container">
+                    <div class="stat-label">SHIELD</div>
+                    <div class="stat-bar-bg">
+                        <div id="shield-bar" class="stat-bar-fill" style="width: 100%; background: #00f;"></div>
+                    </div>
+                </div>
+                <div class="stat-bar-container">
+                    <div class="stat-label">FUEL</div>
+                    <div class="stat-bar-bg">
+                        <div id="fuel-bar" class="stat-bar-fill" style="width: 100%; background: #fb0;"></div>
+                    </div>
+                </div>
+                <div class="stat-text-row">
+                    <span>Cargo: <span id="cargo-value">0</span>/<span id="cargo-max">20</span></span>
+                </div>
+            </div>
         </div>
 
         <!-- Speed indicator -->

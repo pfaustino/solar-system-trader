@@ -23,22 +23,33 @@ export class TradeManager {
                 // Determine local price modifiers
                 let multiplier = 1.0;
 
-                // Imports are more expensive (demand)
+                // Imports are much more expensive (High Demand)
                 if (loc.imports.includes(item.id) || loc.imports.includes('everything')) {
-                    multiplier += 0.3; // +30%
+                    multiplier += 0.5; // +50%
                 }
 
-                // Exports are cheaper (supply)
+                // Exports are much cheaper (High Supply)
                 if (loc.exports.includes(item.id)) {
-                    multiplier -= 0.3; // -30%
+                    multiplier -= 0.5; // -50%
                 }
 
                 // Random day-to-day fluctuation
                 const variance = (Math.random() * 2 - 1) * item.volatility;
                 multiplier += variance;
 
+                // Market Events (Random Booms/Crashes)
+                if (Math.random() < 0.05) { // 5% chance per item
+                    if (Math.random() > 0.5) {
+                        multiplier *= 2.0; // Shortage! Price doubles
+                        console.log(`Shortage of ${item.name} at ${loc.name}`);
+                    } else {
+                        multiplier *= 0.3; // Surplus! Fire sale
+                        console.log(`Surplus of ${item.name} at ${loc.name}`);
+                    }
+                }
+
                 // Distance/Risk factor (Outer system is generally more expensive/profitable)
-                const distanceMult = loc.dangerLevel * 0.05;
+                const distanceMult = loc.dangerLevel * 0.1; // Increased risk premium
                 if (item.category !== 'basic') {
                     multiplier += distanceMult;
                 }
