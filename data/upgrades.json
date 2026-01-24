@@ -1,0 +1,44 @@
+{
+    "systems": {
+        "engine": {
+            "name": "Propulsion",
+            "costBase": 1000,
+            "costMultiplier": 1.5,
+            "statMultiplier": 0.1,
+            "description": "Increases Max Speed and Acceleration by 10% per level.",
+            "maxLevel": 10
+        },
+        "cargo": {
+            "name": "Cargo Bay",
+            "costBase": 500,
+            "costMultiplier": 1.4,
+            "statBonus": 10,
+            "description": "Adds 10 units of cargo capacity per level.",
+            "maxLevel": 10
+        },
+        "hull": {
+            "name": "Hull Plating",
+            "costBase": 800,
+            "costMultiplier": 1.3,
+            "statBonus": 25,
+            "description": "Increases Max Hull Integrity by 25 per level.",
+            "maxLevel": 10
+        },
+        "shield": {
+            "name": "Deflector Shield",
+            "costBase": 1500,
+            "costMultiplier": 1.6,
+            "statBonus": 15,
+            "description": "Increases Max Shield Capacity by 15 per level.",
+            "maxLevel": 10
+        },
+        "computer": {
+            "name": "Trade Computer",
+            "costBase": 2000,
+            "costMultiplier": 1.5,
+            "statBonus": 1,
+            "description": "Unlocks Market Analysis. Lvl 2: Nearby Prices. Lvl 6: System-wide Prices.",
+            "maxLevel": 10
+        }
+    }
+}

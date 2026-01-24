@@ -101,6 +101,7 @@ class Main {
 
         // Create starfield (Points + Trails)
         this.createStarfield();
+        this.createNebula();
 
         // Add lights
         this.setupLights();
@@ -229,6 +230,82 @@ class Main {
         // Ensure trails are rendered even if bounding box is static
         this.trails.frustumCulled = false;
         this.scene.add(this.trails);
+    }
+
+    createCloudTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const context = canvas.getContext('2d');
+
+        const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.4)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 32, 32);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }
+
+    createNebula() {
+        const texture = this.createCloudTexture();
+        const count = 2000;
+        const geom = new THREE.BufferGeometry();
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+
+        // Clump nebulae in clusters
+        const clusters = 5;
+
+        for (let i = 0; i < count; i++) {
+            const clusterIdx = i % clusters;
+            // Base vectors for clusters
+            // We want them distributed around
+            const clusterAngle = (clusterIdx / clusters) * Math.PI * 2;
+            const clusterR = 150000;
+            const cx = Math.sin(clusterAngle) * clusterR;
+            const cy = 0; // Keep roughly in plane? Or random
+            const cz = Math.cos(clusterAngle) * clusterR;
+
+            // Random offset from cluster center
+            const spread = 80000;
+            const x = cx + (Math.random() - 0.5) * spread;
+            const y = (Math.random() - 0.5) * spread;
+            const z = cz + (Math.random() - 0.5) * spread;
+
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+
+            // Color gradient based on cluster
+            const r = 0.2 + Math.random() * 0.4;
+            const g = Math.random() * 0.2;
+            const b = 0.5 + Math.random() * 0.5;
+
+            colors[i * 3] = r;
+            colors[i * 3 + 1] = g;
+            colors[i * 3 + 2] = b;
+        }
+
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: 15000,
+            map: texture,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.15,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const nebula = new THREE.Points(geom, material);
+        this.scene.add(nebula);
     }
 
     setupLights() {

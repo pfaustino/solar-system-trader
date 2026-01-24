@@ -57,6 +57,16 @@
             <div id="target-distance"></div>
         </div>
 
+        <!-- Solar System Map -->
+        <div id="solar-map"></div>
+
+        <!-- Controls Hint -->
+        <div id="controls-hint">
+            <div>[&lt; &gt;] - cycle targets</div>
+            <div>[P] - autopilot</div>
+            <div>[F] - dock</div>
+        </div>
+
         <!-- Radar -->
         <div id="radar">
             <div id="radar-center"></div>
@@ -88,48 +98,79 @@
                 </div>
 
                 <div class="station-content">
-                    <div class="trade-column">
-                        <h3>MARKET</h3>
-                        <div id="market-list" class="scroll-list">
-                            <!-- Items go here -->
-                        </div>
-                    </div>
+                    <div class="station-content">
+                        <div class="left-panel">
+                            <div class="tab-nav">
+                                <button id="tab-trade" class="tab-btn active">MARKET</button>
+                                <button id="tab-outfit" class="tab-btn">OUTFITTER</button>
+                                <button id="tab-analysis" class="tab-btn hidden">ANALYSIS</button>
+                                <button id="tab-missions" class="tab-btn">MISSIONS</button>
+                            </div>
 
-                    <div class="ship-column">
-                        <h3>SHIP STATUS</h3>
-                        <div class="stat-row">
-                            <span>Credits:</span>
-                            <span id="ui-credits">0</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Cargo:</span>
-                            <span id="ui-cargo">0/20</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Fuel:</span>
-                            <span id="ui-fuel">100%</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Hull:</span>
-                            <span id="ui-hull">100%</span>
+                            <!-- Trade View -->
+                            <div id="view-trade" class="tab-view">
+                                <div id="market-list" class="scroll-list">
+                                    <!-- Items go here -->
+                                </div>
+                            </div>
+
+                            <!-- Outfitter View -->
+                            <div id="view-outfit" class="tab-view hidden">
+                                <div id="upgrade-list" class="scroll-list">
+                                    <!-- Upgrades go here -->
+                                </div>
+                            </div>
+
+                            <!-- Analysis View -->
+                            <div id="view-analysis" class="tab-view hidden">
+                                <div id="analysis-grid" class="analysis-grid">
+                                    <!-- Grid goes here -->
+                                </div>
+                            </div>
+
+                            <!-- Missions View -->
+                            <div id="view-missions" class="tab-view hidden">
+                                <div id="mission-list" class="scroll-list">
+                                    <!-- Missions go here -->
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="action-buttons">
-                            <button id="refuel-btn" class="btn">Refuel (10cr)</button>
-                            <button id="repair-btn" class="btn">Repair (50cr)</button>
+                        <div class="ship-column">
+                            <h3>SHIP STATUS</h3>
+                            <div class="stat-row">
+                                <span>Credits:</span>
+                                <span id="ui-credits">0</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>Cargo:</span>
+                                <span id="ui-cargo">0/20</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>Fuel:</span>
+                                <span id="ui-fuel">100%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>Hull:</span>
+                                <span id="ui-hull">100%</span>
+                            </div>
+
+                            <div class="action-buttons">
+                                <button id="refuel-btn" class="btn">Refuel (10cr)</button>
+                                <button id="repair-btn" class="btn">Repair (50cr)</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Docking Prompt -->
+            <div id="dock-prompt" class="hidden">
+                PRESS [F] TO DOCK
+            </div>
         </div>
 
-        <!-- Docking Prompt -->
-        <div id="dock-prompt" class="hidden">
-            PRESS [F] TO DOCK
-        </div>
-    </div>
-
-    <script type="importmap">
+        <script type="importmap">
     {
         "imports": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -137,7 +178,7 @@
         }
     }
     </script>
-    <script type="module" src="src/main.js"></script>
+        <script type="module" src="src/main.js"></script>
 </body>
 
 </html>

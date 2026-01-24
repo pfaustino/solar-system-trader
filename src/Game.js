@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Ship } from './Ship.js';
 import { Station } from './Station.js';
 import { TradeManager } from './TradeManager.js';
+import { QuestManager } from './QuestManager.js';
 import { MiningManager } from './MiningManager.js';
 import { CombatManager } from './CombatManager.js';
 import { AsteroidField } from './AsteroidField.js';
@@ -36,6 +37,7 @@ export class Game {
 
         // Systems
         this.tradeManager = new TradeManager(this);
+        this.questManager = new QuestManager(this);
         this.miningManager = new MiningManager(this);
         this.combatManager = new CombatManager(this);
         this.audioManager = new AudioManager();
@@ -73,6 +75,7 @@ export class Game {
 
         // Init systems
         this.tradeManager.init();
+        this.questManager.init();
         await this.audioManager.load(); // Load sounds
 
         // Load player ship
@@ -84,24 +87,43 @@ export class Game {
         // Create asteroid fields
         this.createAsteroidFields();
 
-        // Position player at Earth
-        const earthPos = this.locationsData.locations.find(l => l.id === 'earth').position;
-        this.playerShip.mesh.position.set(earthPos.x + 100, earthPos.y, earthPos.z);
+        // Position player with save check
+        if (!this.loadGame()) {
+            const earthPos = this.locationsData.locations.find(l => l.id === 'earth').position;
+            this.playerShip.mesh.position.set(earthPos.x + 100, earthPos.y, earthPos.z);
+        } else {
+            // Restore position near saved location
+            const loc = this.locationsData.locations.find(l => l.id === this.currentLocation);
+            if (loc) {
+                // We dock automatically if saved at location? 
+                // Or just spawn near? 
+                // User expects to be docked?
+                // Let's spawn near.
+                this.playerShip.mesh.position.set(loc.position.x + 50, loc.position.y, loc.position.z + 50);
+                this.playerShip.velocity.set(0, 0, 0);
+            }
+            this.updateHUD();
+        }
+
+        // Initialize Map
+        this.createSolarMap();
 
         // Position camera behind ship
         this.updateCamera();
     }
 
     async loadData() {
-        const [ships, locations, commodities] = await Promise.all([
+        const [ships, locations, commodities, upgrades] = await Promise.all([
             fetch('./data/ships.json').then(r => r.json()),
             fetch('./data/locations.json').then(r => r.json()),
-            fetch('./data/commodities.json').then(r => r.json())
+            fetch('./data/commodities.json').then(r => r.json()),
+            fetch('./data/upgrades.json').then(r => r.json())
         ]);
 
         this.shipsData = ships;
         this.locationsData = locations;
         this.commoditiesData = commodities;
+        this.upgradesData = upgrades;
     }
 
     async loadPlayerShip() {
@@ -110,13 +132,13 @@ export class Game {
 
         try {
             const gltf = await loader.loadAsync(`./assets/${starterShip.model}`);
-            this.playerShip = new Ship(gltf.scene, starterShip);
+            this.playerShip = new Ship(gltf.scene, starterShip, this.upgradesData);
             this.scene.add(this.playerShip.mesh);
 
             // Scale ship appropriately
             this.playerShip.mesh.scale.setScalar(5);
 
-            this.cargoMax = starterShip.cargo;
+            this.cargoMax = this.playerShip.maxCargo;
             this.updateHUD();
         } catch (error) {
             console.error('Failed to load ship model:', error);
@@ -135,10 +157,10 @@ export class Game {
         });
         const mesh = new THREE.Mesh(geometry, material);
 
-        this.playerShip = new Ship(mesh, shipData);
+        this.playerShip = new Ship(mesh, shipData, this.upgradesData);
         this.scene.add(this.playerShip.mesh);
 
-        this.cargoMax = shipData.cargo;
+        this.cargoMax = this.playerShip.maxCargo;
         this.updateHUD();
     }
 
@@ -228,38 +250,70 @@ export class Game {
 
         // Target Selection & Autopilot Keys
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'BracketRight') this.cycleTarget(1);
-            if (e.code === 'BracketLeft') this.cycleTarget(-1);
-            if (e.code === 'Slash' || e.key === '/') this.cycleTarget(1);
+            if (e.code === 'Comma') this.cycleTarget(-1);
+            if (e.code === 'Period') this.cycleTarget(1);
             if (e.code === 'KeyP') this.toggleAutopilot();
         });
     }
 
-    cycleTarget(dir) {
-        const stationIds = Array.from(this.stations.keys());
-        if (stationIds.length === 0) return;
+    createSolarMap() {
+        const container = document.getElementById('solar-map');
+        container.innerHTML = '';
+        if (!this.locationsData) return;
 
-        let currentIndex = stationIds.indexOf(this.selectedTargetId);
-        if (currentIndex === -1) currentIndex = 0;
-        else currentIndex += dir;
+        this.locationsData.locations.forEach(loc => {
+            const node = document.createElement('div');
+            node.className = 'map-node';
+            node.dataset.id = loc.id;
+            node.dataset.name = loc.name;
+            container.appendChild(node);
+        });
+        this.updateSolarMap();
+    }
 
-        // Wrap around
-        if (currentIndex >= stationIds.length) currentIndex = 0;
-        if (currentIndex < 0) currentIndex = stationIds.length - 1;
+    updateSolarMap() {
+        const nodes = document.querySelectorAll('.map-node');
+        nodes.forEach(n => {
+            n.classList.remove('visiting', 'targeted');
+            if (n.dataset.id === this.currentLocation) n.classList.add('visiting');
+            if (n.dataset.id === this.selectedTargetId) n.classList.add('targeted');
+        });
+    }
 
-        this.selectedTargetId = stationIds[currentIndex];
+    cycleTarget(direction) {
+        if (!this.locationsData) return;
+
+        const locs = this.locationsData.locations;
+        let index = -1;
+
+        if (this.selectedTargetId) {
+            index = locs.findIndex(l => l.id === this.selectedTargetId);
+        }
+
+        let newIndex = index + direction;
+        if (newIndex >= locs.length) newIndex = 0;
+        if (newIndex < 0) newIndex = locs.length - 1;
+
+        const target = locs[newIndex];
+        this.selectedTargetId = target.id;
+
         this.audioManager.playUIBeep();
 
-        // Show target immediately
-        const station = this.stations.get(this.selectedTargetId);
+        // Update Target UI
         this.hudTargetInfo.classList.remove('hidden');
-
         const status = this.autopilotEnabled ? "[AP ENGAGED]" : "[SELECTED]";
-        this.hudTargetName.textContent = `${station.data.name} ${status}`;
+        this.hudTargetName.textContent = `${target.name} ${status}`;
 
-        // Ensure distance is shown if available
-        const dist = this.playerShip.mesh.position.distanceTo(station.mesh.position);
-        this.hudTargetDistance.textContent = `${Math.floor(dist)} km`;
+        // Ensure distance is shown
+        if (this.playerShip) {
+            // Find target pos
+            // We need station object or location position?
+            // Location has position.
+            const dist = this.playerShip.mesh.position.distanceTo(new THREE.Vector3(target.position.x, target.position.y, target.position.z));
+            this.hudTargetDistance.textContent = `${Math.floor(dist)} km`;
+        }
+
+        this.updateSolarMap();
     }
 
     toggleAutopilot() {
@@ -674,8 +728,9 @@ export class Game {
             }
 
             // Update current location if very close
-            if (dist < 200) {
+            if (dist < 200 && this.currentLocation !== id) {
                 this.currentLocation = id;
+                this.updateSolarMap();
             }
         }
 
@@ -718,6 +773,13 @@ export class Game {
         this.currentLocation = station.data.id;
         document.getElementById('dock-prompt').classList.add('hidden');
         document.getElementById('station-ui').classList.remove('hidden');
+
+        // Record prices if computer allows
+        this.tradeManager.recordPrices(this.currentLocation);
+        this.questManager.generateQuests(this.currentLocation);
+
+        this.saveGame(); // Auto-save on dock
+
         this.updateStationUI();
 
         // Stop ship
@@ -842,6 +904,340 @@ export class Game {
                 this.updateHUD();
             }
         });
+
+        // Setup Tabs
+        const tabs = ['trade', 'outfit', 'analysis', 'missions'];
+        const elements = {};
+
+        tabs.forEach(t => {
+            const btn = document.getElementById(`tab-${t}`);
+            const view = document.getElementById(`view-${t}`);
+            // Clone to clear listeners
+            if (btn) {
+                btn.replaceWith(btn.cloneNode(true));
+                elements[`btn_${t}`] = document.getElementById(`tab-${t}`);
+            }
+            if (view) elements[`view_${t}`] = view;
+        });
+
+        // Loop again to add listeners
+        tabs.forEach(t => {
+            const btn = elements[`btn_${t}`];
+            if (!btn) return;
+
+            btn.addEventListener('click', () => {
+                // Deactivate all
+                tabs.forEach(other => {
+                    if (elements[`btn_${other}`]) elements[`btn_${other}`].classList.remove('active');
+                    if (elements[`view_${other}`]) elements[`view_${other}`].classList.add('hidden');
+                });
+
+                // Activate this
+                btn.classList.add('active');
+                if (elements[`view_${t}`]) elements[`view_${t}`].classList.remove('hidden');
+
+                // Render content if needed
+                if (t === 'analysis') this.renderAnalysisGrid();
+                if (t === 'missions') this.renderMissions();
+                if (t === 'outfit') this.updateOutfitterUI();
+            });
+        });
+
+        // Show Analysis tab logic
+        if (this.playerShip.upgradeLevels.computer > 0) {
+            elements.btn_analysis.classList.remove('hidden');
+        } else {
+            elements.btn_analysis.classList.add('hidden');
+        }
+
+        // Initial render checks
+        if (!elements.view_analysis.classList.contains('hidden')) this.renderAnalysisGrid();
+        if (!elements.view_missions.classList.contains('hidden')) this.renderMissions();
+        if (!elements.view_outfit.classList.contains('hidden')) this.updateOutfitterUI();
+    }
+
+    renderMissions() {
+        const container = document.getElementById('mission-list');
+        container.innerHTML = '';
+
+        // 1. Available Missions
+        const available = this.questManager.getAvailable(this.currentLocation);
+
+        if (available.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'mission-header';
+            header.textContent = 'AVAILABLE CONTRACTS';
+            container.appendChild(header);
+
+            available.forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'mission-card';
+                card.innerHTML = `
+                    <div class="mission-info">
+                        <div class="mission-title">${q.item}</div>
+                        <div class="mission-route">To: <strong>${q.targetName}</strong></div>
+                        <div class="mission-reward">${q.reward} cr</div>
+                    </div>
+                    <button class="btn accept-btn" data-id="${q.id}">ACCEPT</button>
+                `;
+                container.appendChild(card);
+            });
+        } else {
+            const msg = document.createElement('div');
+            msg.className = 'mission-empty';
+            msg.textContent = 'No contracts available at this station.';
+            container.appendChild(msg);
+        }
+
+        // 2. Active Missions
+        const active = this.questManager.getActive();
+        if (active.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'mission-header';
+            header.textContent = 'ACTIVE MISSIONS';
+            header.style.marginTop = '20px';
+            container.appendChild(header);
+
+            active.forEach(q => {
+                const isHere = q.target === this.currentLocation;
+                const card = document.createElement('div');
+                card.className = 'mission-card active-mission';
+                card.innerHTML = `
+                    <div class="mission-info">
+                        <div class="mission-title">${q.item}</div>
+                        <div class="mission-route">Dest: <strong>${q.targetName}</strong></div>
+                    </div>
+                    ${isHere ? `<button class="btn complete-btn" data-id="${q.id}">COMPLETE</button>` : `<div class="mission-status">En Route</div>`}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Listeners
+        container.querySelectorAll('.accept-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (this.questManager.acceptQuest(btn.dataset.id)) {
+                    this.renderMissions();
+                    this.updateHUD(); // Update Global HUD
+                    // Update Station Panel Stats Manually
+                    document.getElementById('ui-credits').textContent = Math.floor(this.credits);
+                    document.getElementById('ui-cargo').textContent = `${this.cargo.length}/${this.cargoMax}`;
+                    this.saveGame();
+                }
+            });
+        });
+
+        container.querySelectorAll('.complete-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (this.questManager.completeQuest(btn.dataset.id)) {
+                    this.renderMissions();
+                    this.updateHUD(); // Update Global HUD
+                    // Update Station Panel Stats Manually
+                    document.getElementById('ui-credits').textContent = Math.floor(this.credits);
+                    document.getElementById('ui-cargo').textContent = `${this.cargo.length}/${this.cargoMax}`;
+                    this.saveGame();
+                }
+            });
+        });
+    }
+
+    renderAnalysisGrid() {
+        const container = document.getElementById('analysis-grid');
+        container.innerHTML = '';
+
+        // ... (Simulated Analysis logic from before, assuming TradeManager handles it)
+        // I need to add renderAnalysisGrid implementation if it's missing or I will break the game.
+        // Wait, I implemented it in Step 1011? 
+        // Step 1011 was `Game.js`.
+        // I am REPLACING the tabs setup block. I should PRESERVE or RE-ADD `renderAnalysisGrid`.
+        // BUT Step 1011 failed?
+        // Step 1011 `replace_file_content` failed in 1013 "target content not found".
+        // So `renderAnalysisGrid` DOES NOT EXIST in Game.js currently.
+        // I MUST IMPLEMENT IT HERE.
+
+        const table = document.createElement('table');
+        table.className = 'analysis-table';
+
+        // Headers
+        const knownLocs = new Set(['earth', 'luna', this.currentLocation]);
+        // Also add logic to pull from TradeManager...
+        // For simplicity, just use all locations for now
+
+        const thead = document.createElement('tr');
+        thead.innerHTML = `<th>Item</th>`;
+
+        const sortedLocs = this.locationsData.locations; // Show all? Or just known?
+        // Let's filter to known ones if possible, but showing all is okay for "System Wide" level.
+        // Let's show all for now.
+
+        sortedLocs.forEach(l => {
+            const isCurrent = l.id === this.currentLocation;
+            thead.innerHTML += `<th style="${isCurrent ? 'color:#0f0' : ''}">${l.name.substring(0, 3)}</th>`;
+        });
+        table.appendChild(thead);
+
+        this.commoditiesData.commodities.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${item.name}</td>`;
+
+            sortedLocs.forEach(l => {
+                const data = this.tradeManager.getKnownPrice(l.id, item.id);
+                if (!data) {
+                    row.innerHTML += `<td>-</td>`;
+                } else {
+                    row.innerHTML += `<td>${data.price}</td>`;
+                }
+            });
+            table.appendChild(row);
+        });
+
+        container.appendChild(table);
+
+        // Populate Outfitter
+        this.updateOutfitterUI();
+    }
+
+    updateOutfitterUI() {
+        if (!this.playerShip || !this.upgradesData) return;
+
+        const list = document.getElementById('upgrade-list');
+        list.innerHTML = '';
+
+        for (const [sysId, sysInfo] of Object.entries(this.upgradesData.systems)) {
+            const currentLevel = this.playerShip.upgradeLevels[sysId] || 0;
+            const nextLevel = currentLevel + 1;
+            const isMaxed = currentLevel >= sysInfo.maxLevel;
+
+            // Calculate Cost: costBase * (costMultiplier ^ currentLevel)
+            const cost = Math.floor(sysInfo.costBase * Math.pow(sysInfo.costMultiplier, currentLevel));
+
+            const itemEl = document.createElement('div');
+            itemEl.className = 'upgrade-item';
+
+            let btnHtml = '';
+            if (isMaxed) {
+                btnHtml = `<button class="btn" disabled>MAX LEVEL</button>`;
+            } else {
+                const canAfford = this.credits >= cost;
+                btnHtml = `<button class="btn upgrade-btn" data-sys="${sysId}" data-cost="${cost}" ${canAfford ? '' : 'disabled'}>
+                    Upgrade (${cost.toLocaleString()}cr)
+                </button>`;
+            }
+
+            itemEl.innerHTML = `
+                <div class="upgrade-info">
+                    <div class="upgrade-name">${sysInfo.name} <span class="level-indicator">Lvl ${currentLevel}/${sysInfo.maxLevel}</span></div>
+                    <div class="upgrade-desc">${sysInfo.description}</div>
+                </div>
+                <div class="upgrade-stats">
+                    ${btnHtml}
+                </div>
+            `;
+            list.appendChild(itemEl);
+        }
+
+        // Add listeners
+        list.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.buyUpgrade(btn.dataset.sys, parseInt(btn.dataset.cost));
+            });
+        });
+    }
+
+    buyUpgrade(sysId, cost) {
+        if (this.credits >= cost) {
+            this.credits -= cost;
+            this.playerShip.upgradeLevels[sysId]++;
+            this.playerShip.recalculateStats();
+
+            // Sync Game stats (Cargo Max might have changed)
+            this.cargoMax = this.playerShip.maxCargo;
+
+            this.audioManager.playUIBeep();
+
+            this.updateHUD(); // Update stats on HUD
+            this.updateStationUI(); // Refresh UI (re-renders outfitter too)
+            this.saveGame();
+        }
+    }
+
+    saveGame() {
+        if (!this.playerShip) return;
+
+        const data = {
+            credits: this.credits,
+            currentLocation: this.currentLocation,
+            cargo: this.cargo,
+            ship: {
+                hull: this.playerShip.hull,
+                fuel: this.playerShip.fuel,
+                shield: this.playerShip.shield,
+                upgradeLevels: this.playerShip.upgradeLevels
+            },
+            quests: {
+                active: this.questManager.activeQuests,
+                available: Array.from(this.questManager.availableQuests.entries())
+            },
+            tradeMemory: Array.from(this.tradeManager.lastKnownPrices.entries()).map(([k, v]) => [k, Array.from(v.entries())]),
+            marketState: Array.from(this.tradeManager.prices.entries()).map(([k, v]) => [k, Array.from(v.entries())])
+        };
+        localStorage.setItem('sst_save', JSON.stringify(data));
+        console.log("Game Saved");
+    }
+
+    loadGame() {
+        const json = localStorage.getItem('sst_save');
+        if (!json) return false;
+
+        try {
+            const data = JSON.parse(json);
+
+            this.credits = Number(data.credits); // Ensure number
+            this.currentLocation = data.currentLocation;
+            this.cargo = data.cargo;
+
+            // Ship
+            if (data.ship) {
+                this.playerShip.hull = Number(data.ship.hull);
+                this.playerShip.fuel = Number(data.ship.fuel);
+                this.playerShip.shield = Number(data.ship.shield);
+                this.playerShip.upgradeLevels = data.ship.upgradeLevels;
+                this.playerShip.recalculateStats();
+                this.cargoMax = this.playerShip.maxCargo;
+            }
+
+            // Quests
+            if (data.quests) {
+                this.questManager.activeQuests = data.quests.active || [];
+                if (data.quests.available) {
+                    this.questManager.availableQuests = new Map(data.quests.available);
+                }
+            }
+
+            // Trade Memory
+            if (data.tradeMemory) {
+                const memMap = new Map();
+                data.tradeMemory.forEach(([locId, items]) => {
+                    memMap.set(locId, new Map(items));
+                });
+                this.tradeManager.lastKnownPrices = memMap;
+            }
+
+            // Market State
+            if (data.marketState) {
+                const markMap = new Map();
+                data.marketState.forEach(([locId, items]) => {
+                    markMap.set(locId, new Map(items));
+                });
+                this.tradeManager.prices = markMap;
+            }
+
+            console.log("Game Loaded");
+            return true;
+        } catch (e) {
+            console.error("Failed to load save:", e);
+            return false;
+        }
     }
 
     updateHUD() {

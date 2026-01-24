@@ -1,49 +1,112 @@
 import * as THREE from 'three';
 
 export class Ship {
-    constructor(mesh, data) {
+    constructor(mesh, data, upgradesData) {
         this.mesh = mesh;
         this.data = data;
+        this.upgradesData = upgradesData; // Store upgrade definitions
+
+        // Upgrade State
+        this.upgradeLevels = {
+            engine: 0,
+            cargo: 0,
+            hull: 0,
+            shield: 0,
+            computer: 0
+        };
 
         // Physics
         this.velocity = new THREE.Vector3();
         this.angularVelocity = new THREE.Vector3();
 
-        // Stats from data
-        // Increased base speed multiplier
-        this.maxSpeed = data.speed * 300; // Was 100
-        this.acceleration = data.speed * 150; // Was 20 (Faster accel)
-        this.turnSpeed = 1.5;
-        this.strafeSpeed = data.speed * 50;
+        // Rotation Smoothing
+        this.targetQuaternion = this.mesh.quaternion.clone();
+        this.rotationSpeed = 2.0;
+        this.damping = 0.1;
 
-        // Combat Stats
+        // Init Stats (Defaults before recalc)
         this.maxHull = 100;
         this.hull = this.maxHull;
         this.maxShield = 50 + (data.combat * 25);
         this.shield = this.maxShield;
-        this.shieldRechargeRate = 5;
-        this.shieldRechargeDelay = 0;
-
         this.maxFuel = 1000;
         this.fuel = this.maxFuel;
-        this.fuelConsumption = 5; // Units per second at full thrust
+        this.maxCargo = data.cargo;
 
-        this.weaponDamage = 10 + (data.combat * 5);
-        this.fireRate = 0.2; // Seconds
-        this.fireCooldown = 0;
+        this.recalculateStats();
 
         // State
         this.boosting = false;
         this.boostMultiplier = 2;
         this.isDead = false;
 
-        // Rotation Smoothing
-        this.targetQuaternion = this.mesh.quaternion.clone();
-        this.rotationSpeed = 2.0;
-        this.damping = 0.1; // Slerp factor (lower = smoother/heavier)
-
         // Add engine glow
         this.createEngineGlow();
+    }
+
+    recalculateStats() {
+        // Safe Data Access
+        const d = this.data || {};
+        const baseSpeed = (d.speed || 4) * 300;
+        const baseAccel = (d.speed || 4) * 150;
+        const baseStrafe = (d.speed || 4) * 50;
+        const baseHull = 100;
+        const baseShield = 50 + ((d.combat || 1) * 25);
+        const baseCargo = d.cargo || 20;
+
+        // Upgrade Multipliers (Safe Defaults)
+        let engineMult = 1;
+        let cargoBonus = 0;
+        let hullBonus = 0;
+        let shieldBonus = 0;
+
+        // Calculate bonuses if data exists
+        if (this.upgradesData && this.upgradesData.systems) {
+            const u = this.upgradeLevels || { engine: 0, cargo: 0, hull: 0, shield: 0 };
+            const sys = this.upgradesData.systems;
+
+            if (sys.engine) engineMult = 1 + (u.engine || 0) * (sys.engine.statMultiplier || 0.1);
+            if (sys.cargo) cargoBonus = (u.cargo || 0) * (sys.cargo.statBonus || 10);
+            if (sys.hull) hullBonus = (u.hull || 0) * (sys.hull.statBonus || 25);
+            if (sys.shield) shieldBonus = (u.shield || 0) * (sys.shield.statBonus || 15);
+        }
+
+        // Apply Stats & Sanitize
+        this.maxSpeed = baseSpeed * engineMult;
+        this.acceleration = baseAccel * engineMult;
+        this.strafeSpeed = baseStrafe * engineMult;
+        this.turnSpeed = 1.5 * (1 + (this.upgradeLevels?.engine || 0) * 0.05);
+
+        // Cargo
+        this.maxCargo = baseCargo + cargoBonus;
+        if (isNaN(this.maxCargo)) this.maxCargo = 20;
+
+        // Hull
+        this.maxHull = baseHull + hullBonus;
+        if (isNaN(this.maxHull)) this.maxHull = 100;
+        // Clamp current hull
+        if (this.hull > this.maxHull) this.hull = this.maxHull;
+        if (isNaN(this.hull) || this.hull < 0) this.hull = this.maxHull;
+
+        // Shield
+        this.maxShield = baseShield + shieldBonus;
+        if (isNaN(this.maxShield)) this.maxShield = 50;
+        if (this.shield > this.maxShield) this.shield = this.maxShield;
+        if (isNaN(this.shield) || this.shield < 0) this.shield = this.maxShield;
+
+        this.shieldRechargeRate = 5 + ((this.upgradeLevels?.shield || 0) * 1);
+
+        // Fuel
+        this.maxFuel = 1000;
+        if (this.fuel > this.maxFuel) this.fuel = this.maxFuel;
+        if (isNaN(this.fuel) || this.fuel < 0) this.fuel = this.maxFuel;
+
+        this.fuelConsumption = 5;
+
+        // Combat
+        this.weaponDamage = 10 + ((d.combat || 1) * 5);
+        this.fireRate = 0.2;
+        this.fireCooldown = 0;
     }
 
     createEngineGlow() {
