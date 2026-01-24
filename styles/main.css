@@ -223,8 +223,9 @@ body {
 }
 
 #station-ui .panel {
-    width: 800px;
-    height: 600px;
+    width: 90vw;
+    max-width: 1200px;
+    height: 80vh;
     display: flex;
     flex-direction: column;
 }
@@ -244,7 +245,7 @@ body {
 }
 
 .left-panel {
-    flex: 2;
+    flex: 3;
     border: 1px solid #0f0;
     padding: 10px;
     display: flex;
@@ -728,12 +729,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: stretch;
-    height: 120px;
-    gap: 10px;
+    min-height: 140px;
+    gap: 15px;
+    border-bottom: 1px solid rgba(0, 50, 0, 0.5);
+    padding-bottom: 15px;
 }
 
 .ship-preview-container {
-    width: 200px;
+    width: 220px;
     flex-shrink: 0;
     border: 1px solid #004488;
     background: rgba(0, 20, 40, 0.3);
@@ -743,14 +746,14 @@ body {
     flex-grow: 1;
     background: rgba(0, 20, 40, 0.8);
     border: 1px solid #004488;
-    padding: 10px;
+    padding: 15px;
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
 .ship-cost-box {
-    width: 150px;
+    width: 180px;
     flex-shrink: 0;
     background: rgba(0, 20, 40, 0.8);
     border: 1px solid #004488;
@@ -813,6 +816,10 @@ body {
     text-align: center;
     pointer-events: none;
     z-index: 10;
+}
+
+#mining-hud.hidden {
+    display: none;
 }
 
 #mining-hud .hud-label {
@@ -912,4 +919,74 @@ body {
         transform: translateY(0);
         opacity: 1;
     }
+}
+
+/* Fleet UI */
+.fleet-layout {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+}
+
+.fleet-list-panel {
+    flex: 1;
+    border: 1px solid #0f0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 20, 0, 0.4);
+}
+
+.fleet-details-panel {
+    flex: 1;
+    border: 1px solid #0f0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 20, 0, 0.4);
+}
+
+.fleet-item {
+    padding: 10px;
+    border: 1px solid #0f0;
+    margin-bottom: 5px;
+    cursor: pointer;
+    background: rgba(0, 50, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fleet-item:hover {
+    background: rgba(0, 255, 0, 0.2);
+}
+
+.fleet-item.selected {
+    border: 2px solid #ff0;
+    background: rgba(50, 50, 0, 0.3);
+}
+
+.fleet-item-name {
+    font-weight: bold;
+    color: #fff;
+}
+
+.fleet-item-status {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.fleet-detail-row {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.fleet-detail-label {
+    color: #8f8;
+    margin-right: 10px;
+}
+
+.fleet-detail-value {
+    color: #fff;
+    font-weight: bold;
 }

@@ -119,6 +119,7 @@
                                 <button id="tab-shipyard" class="tab-btn">SHIPYARD</button>
                                 <button id="tab-analysis" class="tab-btn hidden">ANALYSIS</button>
                                 <button id="tab-missions" class="tab-btn">MISSIONS</button>
+                                <button id="tab-fleet" class="tab-btn">FLEET</button>
                             </div>
 
                             <!-- Trade View -->
@@ -151,6 +152,26 @@
                             <div id="view-missions" class="tab-view hidden">
                                 <div id="mission-list" class="scroll-list">
                                     <!-- Missions go here -->
+                                </div>
+                            </div>
+
+                            <!-- Fleet View -->
+                            <div id="view-fleet" class="tab-view hidden">
+                                <div class="fleet-layout">
+                                    <div class="fleet-list-panel">
+                                        <h4>Your Fleet</h4>
+                                        <div id="fleet-list" class="scroll-list">
+                                            <!-- Fleet items -->
+                                        </div>
+                                    </div>
+                                    <div class="fleet-details-panel">
+                                        <h4 id="fleet-selected-name">Select Ship</h4>
+                                        <div id="fleet-selected-info"></div>
+                                        <div id="fleet-actions" class="action-buttons hidden">
+                                            <button id="btn-fleet-mission" class="btn">Assign Mission</button>
+                                            <button id="btn-fleet-switch" class="btn">Fly Ship</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

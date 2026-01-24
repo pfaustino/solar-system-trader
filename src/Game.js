@@ -9,6 +9,7 @@ import { CombatManager } from './CombatManager.js';
 import { AsteroidField } from './AsteroidField.js';
 import { AudioManager } from './AudioManager.js';
 import { ShipyardPreview } from './ShipyardPreview.js';
+import { FleetManager } from './FleetManager.js';
 
 export class Game {
     constructor(scene, camera, renderer) {
@@ -41,6 +42,7 @@ export class Game {
         this.questManager = new QuestManager(this);
         this.miningManager = new MiningManager(this);
         this.combatManager = new CombatManager(this);
+        this.fleetManager = new FleetManager(this);
         this.audioManager = new AudioManager();
         this.shipyardPreview = new ShipyardPreview(this);
 
@@ -80,6 +82,7 @@ export class Game {
         // Init systems
         this.tradeManager.init();
         this.questManager.init();
+        this.fleetManager.init();
         await this.audioManager.load(); // Load sounds
 
         // Load player ship (Check save first)
@@ -138,17 +141,34 @@ export class Game {
         this.upgradesData = upgrades;
     }
 
-    async loadPlayerShip(shipId = 'alpha') {
+    async loadPlayerShip(shipId = 'alpha', savedState = null) {
         const loader = new GLTFLoader();
         const shipData = this.shipsData.ships.find(s => s.id === shipId) || this.shipsData.ships[0];
 
         try {
             const gltf = await loader.loadAsync(`./assets/${shipData.model}`);
+
+            // Clean up old ship if exists
+            if (this.playerShip) {
+                this.scene.remove(this.playerShip.mesh);
+            }
+
             this.playerShip = new Ship(gltf.scene, shipData, this.upgradesData);
             this.scene.add(this.playerShip.mesh);
 
             // Scale ship appropriately
             this.playerShip.mesh.scale.setScalar(5);
+
+            // Restore state if available
+            if (savedState) {
+                if (savedState.upgradeLevels) this.playerShip.upgradeLevels = savedState.upgradeLevels;
+                // Note: We need to ensure we don't set hull > maxHull after recalc
+                this.playerShip.recalculateStats();
+
+                if (savedState.hull !== undefined) this.playerShip.hull = savedState.hull;
+                if (savedState.fuel !== undefined) this.playerShip.fuel = savedState.fuel;
+                if (savedState.shield !== undefined) this.playerShip.shield = savedState.shield;
+            }
 
             this.cargoMax = this.playerShip.maxCargo;
             this.updateHUD();
@@ -473,6 +493,7 @@ export class Game {
         this.combatManager.update(delta);
         this.miningManager.update(delta);
         this.tradeManager.update(delta);
+        this.fleetManager.update(delta);
 
         if (!this.playerShip) return;
 
@@ -977,7 +998,7 @@ export class Game {
         });
 
         // Setup Tabs
-        const tabs = ['trade', 'outfit', 'shipyard', 'analysis', 'missions'];
+        const tabs = ['trade', 'outfit', 'shipyard', 'analysis', 'missions', 'fleet'];
         const elements = {};
 
         tabs.forEach(t => {
@@ -1012,6 +1033,7 @@ export class Game {
                 if (t === 'missions') this.renderMissions();
                 if (t === 'outfit') this.updateOutfitterUI();
                 if (t === 'shipyard') this.renderShipyard();
+                if (t === 'fleet') this.fleetManager.updateUI();
             });
         });
 
@@ -1170,27 +1192,34 @@ export class Game {
             const card = document.createElement('div');
             card.className = 'ship-card';
 
-            // Net Cost
+            // Net Cost (Trade In)
             const netCost = Math.max(0, ship.cost - tradeInVal);
+            const fullCost = ship.cost;
 
             // Buttons
-            let actionBtn = '';
+            let actionBtns = '';
             if (isOwned) {
-                actionBtn = `<span class="owned-badge">OWNED</span>`;
+                actionBtns = `<span class="owned-badge">OWNED</span>`;
             } else {
-                const canAfford = this.credits >= netCost;
-                // If trade-in > cost, it's a swap (free or refund? let's stick to 0 cost for now to handle complexity, or give credits back?)
-                // Let's allow negative cost (refund) logic in buyShip, but displayed as "+X cr" ?
-                // User asked for "deduct that value".
-                // Let's implement full arithmetic.
+                const canAffordTrade = this.credits >= netCost;
+                const canAffordFull = this.credits >= fullCost;
+
+                // Trade Button
                 let costDisplay = `${netCost.toLocaleString()} cr`;
                 if (ship.cost < tradeInVal) {
-                    costDisplay = `+ ${(tradeInVal - ship.cost).toLocaleString()} cr`;
+                    costDisplay = `+ ${(tradeInVal - ship.cost).toLocaleString()} cr`; // Refund
                 }
 
-                actionBtn = `<button class="btn buy-ship-btn" data-id="${ship.id}" data-cost="${ship.cost}" data-net="${netCost}" ${canAfford ? '' : 'disabled'}>
-                    TRADE
-                </button>`;
+                actionBtns = `
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <button class="btn buy-ship-btn" data-type="trade" data-id="${ship.id}" data-cost="${ship.cost}" data-net="${netCost}" ${canAffordTrade ? '' : 'disabled'}>
+                            TRADE (${costDisplay})
+                        </button>
+                        <button class="btn buy-ship-btn" data-type="add" data-id="${ship.id}" data-cost="${fullCost}" ${canAffordFull ? '' : 'disabled'}>
+                            ADD FLEET (${fullCost.toLocaleString()})
+                        </button>
+                    </div>
+                `;
             }
 
             card.innerHTML = `
@@ -1206,9 +1235,8 @@ export class Game {
                     <div class="ship-desc">${ship.description}</div>
                 </div>
                 <div class="ship-cost-box">
-                    <span class="ship-cost" style="font-size:12px; color:#aaa; text-decoration:line-through;">${ship.cost.toLocaleString()} cr</span>
-                    <span class="ship-cost">${Math.max(0, ship.cost - tradeInVal).toLocaleString()} cr</span>
-                    ${actionBtn}
+                    <span class="ship-cost" style="font-size:12px; color:#aaa;">Base: ${ship.cost.toLocaleString()} cr</span>
+                    ${actionBtns}
                 </div>
             `;
             container.appendChild(card);
@@ -1218,23 +1246,34 @@ export class Game {
         container.querySelectorAll('.buy-ship-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.dataset.id;
-                const cost = parseInt(btn.dataset.cost); // Raw cost
+                const type = btn.dataset.type;
+                const cost = parseInt(btn.dataset.cost);
+                const net = btn.dataset.net ? parseInt(btn.dataset.net) : cost;
 
-                // Check cargo capacity of new ship to warn about overflow
-                const newShip = this.shipsData.ships.find(s => s.id === id);
-                let warning = '';
-                if (newShip.cargo < this.cargo.length) {
-                    warning = `\n\nWARNING: New cargo capacity (${newShip.cargo}) is smaller than current cargo (${this.cargo.length}). Excess items will be discarded!`;
-                }
+                // Confirm
+                const shipName = this.shipsData.ships.find(s => s.id === id).name;
 
-                if (confirm(`Trade in your current vessel for ${id.toUpperCase()}?\n\nNet Cost: ${(Math.max(0, cost - tradeInVal)).toLocaleString()} cr${warning}`)) {
-                    this.buyShip(id, cost, tradeInVal);
+                if (type === 'trade') {
+                    // Check cargo capacity
+                    const newShip = this.shipsData.ships.find(s => s.id === id);
+                    let warning = '';
+                    if (newShip.cargo < this.cargo.length) {
+                        warning = `\n\nWARNING: New cargo capacity (${newShip.cargo}) is smaller than current cargo (${this.cargo.length}). Excess items will be discarded!`;
+                    }
+
+                    if (confirm(`Trade in your current vessel for ${shipName}?\n\nNet Cost: ${net.toLocaleString()} cr${warning}`)) {
+                        this.buyShip(id, cost, tradeInVal, false);
+                    }
+                } else if (type === 'add') {
+                    if (confirm(`Purchase ${shipName} for your Fleet?\n\nCost: ${cost.toLocaleString()} cr\nYour current ship will be docked.`)) {
+                        this.buyShip(id, cost, 0, true);
+                    }
                 }
             });
         });
     }
 
-    async buyShip(shipId, baseCost, tradeInVal) {
+    async buyShip(shipId, baseCost, tradeInVal, addToFleet = false) {
         const netCost = Math.max(0, baseCost - tradeInVal);
 
         if (this.credits < netCost) return;
@@ -1242,11 +1281,24 @@ export class Game {
         const newShipData = this.shipsData.ships.find(s => s.id === shipId);
         if (!newShipData) return;
 
-        // Deduct credits (or refund if logic allows, but for now max(0))
+        // Deduct credits
         this.credits -= netCost;
-        // If we want to allow refunds (trading down):
-        if (baseCost < tradeInVal) {
+        if (!addToFleet && baseCost < tradeInVal) {
             this.credits += (tradeInVal - baseCost);
+        }
+
+        // Handle Old Ship
+        if (addToFleet) {
+            // Add current ship to fleet with state!
+            const state = {
+                upgradeLevels: JSON.parse(JSON.stringify(this.playerShip.upgradeLevels)), // Clone
+                hull: this.playerShip.hull,
+                fuel: this.playerShip.fuel,
+                shield: this.playerShip.shield,
+                maxHull: this.playerShip.maxHull // Useful for condition calc
+            };
+            this.fleetManager.addShip(this.playerShip.data, state);
+            this.showMessage("Old ship moved to Fleet Hangar.", "info");
         }
 
         // Remove old ship mesh
@@ -1273,7 +1325,7 @@ export class Game {
             // Update Max Cargo
             this.cargoMax = this.playerShip.maxCargo;
 
-            // Cargo Overflow
+            // Cargo Overflow (only if switching to smaller ship, which happens in both cases)
             if (this.cargo.length > this.cargoMax) {
                 this.cargo = this.cargo.slice(0, this.cargoMax);
                 console.log("Cargo truncated.");
@@ -1282,15 +1334,15 @@ export class Game {
 
             this.audioManager.playUIBeep();
             this.updateHUD();
-            this.renderShipyard();
+            this.renderShipyard(); // Refresh UI as owned status might change logic
             this.saveGame();
 
         } catch (e) {
             console.error("Failed to load ship", e);
             // Refund
-            this.credits += netCost; // Revert
-            // If refund logic used:
-            if (baseCost < tradeInVal) this.credits -= (tradeInVal - baseCost);
+            this.credits += netCost;
+            if (!addToFleet && baseCost < tradeInVal) this.credits -= (tradeInVal - baseCost);
+            this.showMessage("Error loading ship. Purchase cancelled.", "error");
         }
     }
 
@@ -1441,7 +1493,8 @@ export class Game {
                 available: Array.from(this.questManager.availableQuests.entries())
             },
             tradeMemory: Array.from(this.tradeManager.lastKnownPrices.entries()).map(([k, v]) => [k, Array.from(v.entries())]),
-            marketState: Array.from(this.tradeManager.prices.entries()).map(([k, v]) => [k, Array.from(v.entries())])
+            marketState: Array.from(this.tradeManager.prices.entries()).map(([k, v]) => [k, Array.from(v.entries())]),
+            fleet: this.fleetManager.getFleetList()
         };
         localStorage.setItem('sst_save', JSON.stringify(data));
         console.log("Game Saved");
@@ -1478,11 +1531,7 @@ export class Game {
 
             // Trade Memory
             if (data.tradeMemory) {
-                const memMap = new Map();
-                data.tradeMemory.forEach(([locId, items]) => {
-                    memMap.set(locId, new Map(items));
-                });
-                this.tradeManager.lastKnownPrices = memMap;
+                this.tradeManager.lastKnownPrices = new Map(data.tradeMemory.map(([k, v]) => [k, new Map(v)]));
             }
 
             // Market State
@@ -1492,6 +1541,11 @@ export class Game {
                     markMap.set(locId, new Map(items));
                 });
                 this.tradeManager.prices = markMap;
+            }
+
+            // Fleet
+            if (data.fleet) {
+                this.fleetManager.load(data.fleet);
             }
 
             console.log("Game Loaded");
