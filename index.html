@@ -55,7 +55,20 @@
         <div id="target-info" class="hidden">
             <div id="target-name"></div>
             <div id="target-distance"></div>
+            <div id="target-eta"></div>
         </div>
+
+        <!-- Mining HUD -->
+        <div id="mining-hud" class="hidden">
+            <div class="hud-label">LASER TEMP</div>
+            <div class="bar-container small">
+                <div id="mining-heat-bar" class="bar-fill heat"></div>
+            </div>
+            <div id="mining-status">READY</div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notification-area"></div>
 
         <!-- Solar System Map -->
         <div id="solar-map"></div>
@@ -103,6 +116,7 @@
                             <div class="tab-nav">
                                 <button id="tab-trade" class="tab-btn active">MARKET</button>
                                 <button id="tab-outfit" class="tab-btn">OUTFITTER</button>
+                                <button id="tab-shipyard" class="tab-btn">SHIPYARD</button>
                                 <button id="tab-analysis" class="tab-btn hidden">ANALYSIS</button>
                                 <button id="tab-missions" class="tab-btn">MISSIONS</button>
                             </div>
@@ -119,6 +133,11 @@
                                 <div id="upgrade-list" class="scroll-list">
                                     <!-- Upgrades go here -->
                                 </div>
+                            </div>
+
+                            <!-- Shipyard View -->
+                            <div id="view-shipyard" class="tab-view hidden">
+                                <div id="shipyard-list" class="scroll-list"></div>
                             </div>
 
                             <!-- Analysis View -->

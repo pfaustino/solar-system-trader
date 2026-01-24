@@ -39,6 +39,14 @@
             "statBonus": 1,
             "description": "Unlocks Market Analysis. Lvl 2: Nearby Prices. Lvl 6: System-wide Prices.",
             "maxLevel": 10
+        },
+        "defense": {
+            "name": "Auto-Defense",
+            "costBase": 3000,
+            "costMultiplier": 1.7,
+            "statBonus": 1,
+            "description": "Automated turret engages nearby enemies. Rate/Range improves with level.",
+            "maxLevel": 10
         }
     }
 }

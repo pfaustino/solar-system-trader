@@ -137,8 +137,32 @@ export class AudioManager {
 
     playEnemyLaser() {
         if (!this.enabled) return;
-        // Keep procedural for enemy for now, or reuse laser sample
-        this.playProceduralLaser();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth'; // Rougher sound
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.25);
+    }
+
+    playTurret() {
+        if (!this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square'; // Robotic/Mechanical
+        osc.frequency.setValueAtTime(1500, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime); // Quieter
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.1);
     }
 
     playExplosion() {

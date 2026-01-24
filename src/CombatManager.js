@@ -30,14 +30,16 @@ export class CombatManager {
             if (enemy.canFire()) {
                 const data = enemy.fire();
                 this.spawnProjectile(data);
+                this.game.audioManager.playEnemyLaser();
             }
 
             // Remove dead enemies
             if (enemy.isDead) {
                 this.enemies.splice(index, 1);
                 // Reward
-                this.game.credits += 100 * (enemy.stats.scale); // Bounty
-                this.game.updateHUD(); // Need new log?
+                this.game.credits += 100 * (enemy.stats.scale);
+                this.game.updateHUD();
+                this.game.audioManager.playExplosion(); // Explosion Sound
             }
         });
 
@@ -78,6 +80,59 @@ export class CombatManager {
                 this.spawnProjectile(data);
                 this.game.audioManager.playLaser();
             }
+        }
+
+        // Auto-Defense System
+        if (this.game.playerShip.upgradeLevels && this.game.playerShip.upgradeLevels.defense > 0) {
+            this.handleAutoDefense(delta);
+        }
+    }
+
+    handleAutoDefense(delta) {
+        if (!this.autoDefenseTimer) this.autoDefenseTimer = 0;
+        this.autoDefenseTimer -= delta;
+
+        if (this.autoDefenseTimer > 0) return;
+
+        const level = this.game.playerShip.upgradeLevels.defense;
+        const range = 500 + (level * 200); // 700 to 2500
+        const fireRate = Math.max(0.1, 2.0 - (level * 0.15)); // 1.85s down to 0.5s
+
+        // Find nearest enemy
+        let nearest = null;
+        let minDest = range;
+
+        for (const enemy of this.enemies) {
+            const dist = this.game.playerShip.mesh.position.distanceTo(enemy.mesh.position);
+            if (dist < minDest) {
+                minDest = dist;
+                nearest = enemy;
+            }
+        }
+
+        if (nearest) {
+            // Calculate direction to enemy with predictive aim?
+            // Simple direct aim for now
+            const direction = nearest.mesh.position.clone().sub(this.game.playerShip.mesh.position).normalize();
+
+            // Create quaternion from direction
+            const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+
+            // Offset slightly so it's visible (outside ship hull)
+            const startPos = this.game.playerShip.mesh.position.clone().add(direction.clone().multiplyScalar(3));
+
+            // Spawn projectile
+            this.spawnProjectile({
+                position: startPos,
+                quaternion: quaternion,
+                damage: 5 + (level * 2), // Damage scales
+                isPlayer: true
+            });
+
+            // Turret Sound
+            if (Math.random() > 0.5) this.game.audioManager.playTurret();
+
+            this.autoDefenseTimer = fireRate;
         }
     }
 

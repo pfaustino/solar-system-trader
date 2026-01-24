@@ -12,7 +12,8 @@ export class Ship {
             cargo: 0,
             hull: 0,
             shield: 0,
-            computer: 0
+            computer: 0,
+            defense: 0
         };
 
         // Physics

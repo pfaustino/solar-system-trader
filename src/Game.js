@@ -8,6 +8,7 @@ import { MiningManager } from './MiningManager.js';
 import { CombatManager } from './CombatManager.js';
 import { AsteroidField } from './AsteroidField.js';
 import { AudioManager } from './AudioManager.js';
+import { ShipyardPreview } from './ShipyardPreview.js';
 
 export class Game {
     constructor(scene, camera, renderer) {
@@ -41,6 +42,7 @@ export class Game {
         this.miningManager = new MiningManager(this);
         this.combatManager = new CombatManager(this);
         this.audioManager = new AudioManager();
+        this.shipyardPreview = new ShipyardPreview(this);
 
         // Input state
         this.keys = {};
@@ -56,6 +58,7 @@ export class Game {
         this.hudTargetInfo = document.getElementById('target-info');
         this.hudTargetName = document.getElementById('target-name');
         this.hudTargetDistance = document.getElementById('target-distance');
+        this.hudTargetEta = document.getElementById('target-eta');
 
         // Navigation Elements
         this.radarElement = document.getElementById('radar');
@@ -72,14 +75,23 @@ export class Game {
     async init() {
         // Load game data
         await this.loadData();
+        await this.shipyardPreview.init(this.shipsData);
 
         // Init systems
         this.tradeManager.init();
         this.questManager.init();
         await this.audioManager.load(); // Load sounds
 
-        // Load player ship
-        await this.loadPlayerShip();
+        // Load player ship (Check save first)
+        let shipId = 'alpha';
+        const saved = localStorage.getItem('sst_save');
+        if (saved) {
+            try {
+                const d = JSON.parse(saved);
+                if (d.shipId) shipId = d.shipId;
+            } catch (e) { }
+        }
+        await this.loadPlayerShip(shipId);
 
         // Create stations
         this.createStations();
@@ -126,13 +138,13 @@ export class Game {
         this.upgradesData = upgrades;
     }
 
-    async loadPlayerShip() {
+    async loadPlayerShip(shipId = 'alpha') {
         const loader = new GLTFLoader();
-        const starterShip = this.shipsData.ships[0]; // Alpha - starter ship
+        const shipData = this.shipsData.ships.find(s => s.id === shipId) || this.shipsData.ships[0];
 
         try {
-            const gltf = await loader.loadAsync(`./assets/${starterShip.model}`);
-            this.playerShip = new Ship(gltf.scene, starterShip, this.upgradesData);
+            const gltf = await loader.loadAsync(`./assets/${shipData.model}`);
+            this.playerShip = new Ship(gltf.scene, shipData, this.upgradesData);
             this.scene.add(this.playerShip.mesh);
 
             // Scale ship appropriately
@@ -143,7 +155,7 @@ export class Game {
         } catch (error) {
             console.error('Failed to load ship model:', error);
             // Create placeholder ship
-            this.createPlaceholderShip(starterShip);
+            this.createPlaceholderShip(shipData);
         }
     }
 
@@ -265,18 +277,59 @@ export class Game {
             const node = document.createElement('div');
             node.className = 'map-node';
             node.dataset.id = loc.id;
-            node.dataset.name = loc.name;
+
+            const topLabel = document.createElement('div');
+            topLabel.className = 'map-label-top';
+            topLabel.textContent = loc.name;
+            node.appendChild(topLabel);
+
+            const bottomLabel = document.createElement('div');
+            bottomLabel.className = 'map-label-bottom';
+            bottomLabel.textContent = loc.name;
+            node.appendChild(bottomLabel);
+
             container.appendChild(node);
         });
         this.updateSolarMap();
     }
 
     updateSolarMap() {
+        if (!this.questManager) return;
+        const activeQuests = this.questManager.activeQuests;
+
+        // Count quests per target
+        const questCounts = {};
+        activeQuests.forEach(q => {
+            questCounts[q.target] = (questCounts[q.target] || 0) + 1;
+        });
+
         const nodes = document.querySelectorAll('.map-node');
         nodes.forEach(n => {
+            const id = n.dataset.id;
             n.classList.remove('visiting', 'targeted');
-            if (n.dataset.id === this.currentLocation) n.classList.add('visiting');
-            if (n.dataset.id === this.selectedTargetId) n.classList.add('targeted');
+
+            if (id === this.currentLocation) n.classList.add('visiting');
+            if (id === this.selectedTargetId) n.classList.add('targeted');
+
+            // Update Bottom Label for Quest Counts
+            const bottomLab = n.querySelector('.map-label-bottom');
+            const topLab = n.querySelector('.map-label-top');
+
+            if (bottomLab && topLab) {
+                const name = topLab.textContent;
+                const count = questCounts[id] || 0;
+
+                if (count > 0) {
+                    bottomLab.textContent = `${name}\n${count} completions`;
+                    // Maybe highlight color if quests are ready?
+                    // Let CSS handle targeted state. If not targeted, it's faded.
+                    // But if I have completions there, I might want to see it even if not targeted?
+                    // User didn't ask explicitly. Just "Under the Target label".
+                    // So we assume it shows when targeted (or hovering/faded).
+                } else {
+                    bottomLab.textContent = name;
+                }
+            }
         });
     }
 
@@ -416,6 +469,11 @@ export class Game {
     }
 
     update(delta) {
+        // Systems Update (Always run)
+        this.combatManager.update(delta);
+        this.miningManager.update(delta);
+        this.tradeManager.update(delta);
+
         if (!this.playerShip) return;
 
         // If docked, don't update ship physics or camera
@@ -746,6 +804,19 @@ export class Game {
 
             this.hudTargetName.textContent = label;
             this.hudTargetDistance.textContent = `${Math.floor(dist)} km`;
+
+            // ETA Calc
+            if (this.hudTargetEta) {
+                const speed = this.playerShip.velocity.length();
+                if (speed > 10) {
+                    const seconds = Math.floor(dist / speed);
+                    if (seconds < 60) this.hudTargetEta.textContent = `ETA: ${seconds}s`;
+                    else if (seconds < 3600) this.hudTargetEta.textContent = `ETA: ${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+                    else this.hudTargetEta.textContent = `ETA: >1h`;
+                } else {
+                    this.hudTargetEta.textContent = "ETA: --";
+                }
+            }
         } else {
             this.hudTargetInfo.classList.add('hidden');
         }
@@ -906,7 +977,7 @@ export class Game {
         });
 
         // Setup Tabs
-        const tabs = ['trade', 'outfit', 'analysis', 'missions'];
+        const tabs = ['trade', 'outfit', 'shipyard', 'analysis', 'missions'];
         const elements = {};
 
         tabs.forEach(t => {
@@ -940,6 +1011,7 @@ export class Game {
                 if (t === 'analysis') this.renderAnalysisGrid();
                 if (t === 'missions') this.renderMissions();
                 if (t === 'outfit') this.updateOutfitterUI();
+                if (t === 'shipyard') this.renderShipyard();
             });
         });
 
@@ -954,6 +1026,7 @@ export class Game {
         if (!elements.view_analysis.classList.contains('hidden')) this.renderAnalysisGrid();
         if (!elements.view_missions.classList.contains('hidden')) this.renderMissions();
         if (!elements.view_outfit.classList.contains('hidden')) this.updateOutfitterUI();
+        if (elements.view_shipyard && !elements.view_shipyard.classList.contains('hidden')) this.renderShipyard();
     }
 
     renderMissions() {
@@ -1041,34 +1114,198 @@ export class Game {
         });
     }
 
+    calculateShipValue() {
+        if (!this.playerShip) return 0;
+
+        let val = this.playerShip.data.cost * 0.5; // Base hull trade-in (50%)
+
+        // Add 50% of installed upgrades value
+        for (const [sysId, level] of Object.entries(this.playerShip.upgradeLevels)) {
+            if (level > 0 && this.upgradesData.systems[sysId]) {
+                const sys = this.upgradesData.systems[sysId];
+                let upgradeCost = 0;
+                let currentCost = sys.costBase;
+
+                // Sum cost of levels 1 to current
+                for (let i = 0; i < level; i++) {
+                    upgradeCost += currentCost;
+                    currentCost *= sys.costMultiplier;
+                }
+                val += upgradeCost * 0.5;
+            }
+        }
+        return Math.floor(val);
+    }
+
+    renderShipyard() {
+        console.log("Rendering Shipyard...", this.shipsData);
+        if (!this.shipsData) return;
+
+        const container = document.getElementById('shipyard-list');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        // Calculate trade-in value
+        const tradeInVal = this.calculateShipValue();
+
+        // Header
+        const header = document.createElement('div');
+        header.style.color = '#fff';
+        header.style.marginBottom = '10px';
+        header.style.padding = '0 5px';
+        header.innerHTML = `
+            <div>CURRENT VESSEL: <span style="color:#0f0">${this.playerShip.data.name}</span></div>
+            <div style="font-size:12px; color:#aaa; margin-top:5px;">
+                TRADE-IN VALUE: <span style="color:#ff0">${tradeInVal.toLocaleString()} cr</span>
+                <br>(Includes 50% of hull and installed upgrades)
+                <br><span style="color:#f88; font-weight:bold;">WARNING: Purchasing a new vessel trades in your current ship!</span>
+            </div>
+        `;
+        container.appendChild(header);
+
+        this.shipsData.ships.forEach(ship => {
+            const isOwned = this.playerShip.data.id === ship.id;
+
+            const card = document.createElement('div');
+            card.className = 'ship-card';
+
+            // Net Cost
+            const netCost = Math.max(0, ship.cost - tradeInVal);
+
+            // Buttons
+            let actionBtn = '';
+            if (isOwned) {
+                actionBtn = `<span class="owned-badge">OWNED</span>`;
+            } else {
+                const canAfford = this.credits >= netCost;
+                // If trade-in > cost, it's a swap (free or refund? let's stick to 0 cost for now to handle complexity, or give credits back?)
+                // Let's allow negative cost (refund) logic in buyShip, but displayed as "+X cr" ?
+                // User asked for "deduct that value".
+                // Let's implement full arithmetic.
+                let costDisplay = `${netCost.toLocaleString()} cr`;
+                if (ship.cost < tradeInVal) {
+                    costDisplay = `+ ${(tradeInVal - ship.cost).toLocaleString()} cr`;
+                }
+
+                actionBtn = `<button class="btn buy-ship-btn" data-id="${ship.id}" data-cost="${ship.cost}" data-net="${netCost}" ${canAfford ? '' : 'disabled'}>
+                    TRADE
+                </button>`;
+            }
+
+            card.innerHTML = `
+                <div class="ship-preview-container" data-id="${ship.id}"></div>
+                <div class="ship-info">
+                    <h3>${ship.name}</h3>
+                    <div class="ship-stats">
+                        <div>Speed: ${ship.speed}</div>
+                        <div>Turn: ${ship.speed}</div> 
+                        <div>Cargo: ${ship.cargo}</div>
+                        <div>Combat: ${ship.combat}</div>
+                    </div>
+                    <div class="ship-desc">${ship.description}</div>
+                </div>
+                <div class="ship-cost-box">
+                    <span class="ship-cost" style="font-size:12px; color:#aaa; text-decoration:line-through;">${ship.cost.toLocaleString()} cr</span>
+                    <span class="ship-cost">${Math.max(0, ship.cost - tradeInVal).toLocaleString()} cr</span>
+                    ${actionBtn}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        // Listeners
+        container.querySelectorAll('.buy-ship-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                const cost = parseInt(btn.dataset.cost); // Raw cost
+
+                // Check cargo capacity of new ship to warn about overflow
+                const newShip = this.shipsData.ships.find(s => s.id === id);
+                let warning = '';
+                if (newShip.cargo < this.cargo.length) {
+                    warning = `\n\nWARNING: New cargo capacity (${newShip.cargo}) is smaller than current cargo (${this.cargo.length}). Excess items will be discarded!`;
+                }
+
+                if (confirm(`Trade in your current vessel for ${id.toUpperCase()}?\n\nNet Cost: ${(Math.max(0, cost - tradeInVal)).toLocaleString()} cr${warning}`)) {
+                    this.buyShip(id, cost, tradeInVal);
+                }
+            });
+        });
+    }
+
+    async buyShip(shipId, baseCost, tradeInVal) {
+        const netCost = Math.max(0, baseCost - tradeInVal);
+
+        if (this.credits < netCost) return;
+
+        const newShipData = this.shipsData.ships.find(s => s.id === shipId);
+        if (!newShipData) return;
+
+        // Deduct credits (or refund if logic allows, but for now max(0))
+        this.credits -= netCost;
+        // If we want to allow refunds (trading down):
+        if (baseCost < tradeInVal) {
+            this.credits += (tradeInVal - baseCost);
+        }
+
+        // Remove old ship mesh
+        this.scene.remove(this.playerShip.mesh);
+
+        // Load new mesh
+        const loader = new GLTFLoader();
+        try {
+            const gltf = await loader.loadAsync(`./assets/${newShipData.model}`);
+
+            // Preserve position/rotation
+            const oldPos = this.playerShip.mesh.position.clone();
+            const oldRot = this.playerShip.mesh.quaternion.clone();
+
+            // Create new ship instance
+            this.playerShip = new Ship(gltf.scene, newShipData, this.upgradesData);
+
+            this.playerShip.mesh.position.copy(oldPos);
+            this.playerShip.mesh.quaternion.copy(oldRot);
+            this.playerShip.mesh.scale.setScalar(5);
+
+            this.scene.add(this.playerShip.mesh);
+
+            // Update Max Cargo
+            this.cargoMax = this.playerShip.maxCargo;
+
+            // Cargo Overflow
+            if (this.cargo.length > this.cargoMax) {
+                this.cargo = this.cargo.slice(0, this.cargoMax);
+                console.log("Cargo truncated.");
+                this.showMessage("CARGO OVERFLOW: Excess items discarded.", "warning");
+            }
+
+            this.audioManager.playUIBeep();
+            this.updateHUD();
+            this.renderShipyard();
+            this.saveGame();
+
+        } catch (e) {
+            console.error("Failed to load ship", e);
+            // Refund
+            this.credits += netCost; // Revert
+            // If refund logic used:
+            if (baseCost < tradeInVal) this.credits -= (tradeInVal - baseCost);
+        }
+    }
+
     renderAnalysisGrid() {
         const container = document.getElementById('analysis-grid');
         container.innerHTML = '';
-
-        // ... (Simulated Analysis logic from before, assuming TradeManager handles it)
-        // I need to add renderAnalysisGrid implementation if it's missing or I will break the game.
-        // Wait, I implemented it in Step 1011? 
-        // Step 1011 was `Game.js`.
-        // I am REPLACING the tabs setup block. I should PRESERVE or RE-ADD `renderAnalysisGrid`.
-        // BUT Step 1011 failed?
-        // Step 1011 `replace_file_content` failed in 1013 "target content not found".
-        // So `renderAnalysisGrid` DOES NOT EXIST in Game.js currently.
-        // I MUST IMPLEMENT IT HERE.
 
         const table = document.createElement('table');
         table.className = 'analysis-table';
 
         // Headers
-        const knownLocs = new Set(['earth', 'luna', this.currentLocation]);
-        // Also add logic to pull from TradeManager...
-        // For simplicity, just use all locations for now
-
         const thead = document.createElement('tr');
         thead.innerHTML = `<th>Item</th>`;
 
-        const sortedLocs = this.locationsData.locations; // Show all? Or just known?
-        // Let's filter to known ones if possible, but showing all is okay for "System Wide" level.
-        // Let's show all for now.
+        const sortedLocs = this.locationsData.locations;
 
         sortedLocs.forEach(l => {
             const isCurrent = l.id === this.currentLocation;
@@ -1080,21 +1317,45 @@ export class Game {
             const row = document.createElement('tr');
             row.innerHTML = `<td>${item.name}</td>`;
 
+            // Calc min/max for this row
+            let minP = Infinity;
+            let maxP = -Infinity;
+            let pricesFound = false;
+
+            // Gather valid prices first
+            const priceMap = new Map(); // locId -> price
             sortedLocs.forEach(l => {
                 const data = this.tradeManager.getKnownPrice(l.id, item.id);
-                if (!data) {
+                if (data) {
+                    priceMap.set(l.id, data.price);
+                    if (data.price < minP) minP = data.price;
+                    if (data.price > maxP) maxP = data.price;
+                    pricesFound = true;
+                }
+            });
+
+            sortedLocs.forEach(l => {
+                if (!priceMap.has(l.id)) {
                     row.innerHTML += `<td>-</td>`;
                 } else {
-                    row.innerHTML += `<td>${data.price}</td>`;
+                    const p = priceMap.get(l.id);
+                    let style = '';
+                    if (pricesFound && minP !== maxP) {
+                        if (p === minP) style = 'color:#ff4444; font-weight:bold;'; // Lowest = Red
+                        else if (p === maxP) style = 'color:#4444ff; font-weight:bold;'; // Highest = Blue
+                    } else if (pricesFound && minP === maxP) {
+                        // Only one price or all same. Treat as lowest (Red) or neutral?
+                        // User said "lowest... Red". Single price is lowest. 
+                        // But it's also highest. Use Red as default for "single/lowest".
+                        style = 'color:#ff4444; font-weight:bold;';
+                    }
+                    row.innerHTML += `<td style="${style}">${p}</td>`;
                 }
             });
             table.appendChild(row);
         });
 
         container.appendChild(table);
-
-        // Populate Outfitter
-        this.updateOutfitterUI();
     }
 
     updateOutfitterUI() {
@@ -1166,6 +1427,7 @@ export class Game {
 
         const data = {
             credits: this.credits,
+            shipId: this.playerShip.data.id,
             currentLocation: this.currentLocation,
             cargo: this.cargo,
             ship: {
@@ -1241,6 +1503,7 @@ export class Game {
     }
 
     updateHUD() {
+        this.updateSolarMap();
         this.hudCredits.textContent = Math.floor(this.credits);
         this.hudCargo.textContent = this.cargo.length;
         this.hudCargoMax.textContent = this.cargoMax;
@@ -1261,6 +1524,30 @@ export class Game {
             this.hudHullBar.style.width = `${Math.max(0, hullPct)}%`;
             this.hudShieldBar.style.width = `${Math.max(0, shieldPct)}%`;
             this.hudFuelBar.style.width = `${Math.max(0, fuelPct)}%`;
+        }
+    }
+
+    showMessage(text, type = 'info') {
+        const container = document.getElementById('notification-area');
+        if (!container) return;
+
+        const el = document.createElement('div');
+        el.className = `notification-msg ${type}`;
+        el.textContent = text;
+        container.appendChild(el);
+
+        // Remove after delay
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }, 1000);
+        }, 5000);
+    }
+
+    postRender() {
+        if (this.shipyardPreview) {
+            this.shipyardPreview.render();
         }
     }
 }

@@ -11,7 +11,20 @@ export class MiningManager {
 
         this.raycaster = new THREE.Raycaster();
 
+        // Heat mechanics
+        this.heat = 0;
+        this.maxHeat = 100;
+        this.coolRate = 20; // Heat per second
+        this.heatRate = 30; // Heat per second
+        this.overheated = false;
+
+        // UI
+        this.hud = document.getElementById('mining-hud');
+        this.heatBar = document.getElementById('mining-heat-bar');
+        this.statusText = document.getElementById('mining-status');
+
         this.setupLaser();
+        this.setupParticles();
     }
 
     setupLaser() {
@@ -26,15 +39,113 @@ export class MiningManager {
         const material = new THREE.MeshBasicMaterial({
             color: 0xff00ff,
             transparent: true,
-            opacity: 0.6
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
         });
 
         this.laserBeam = new THREE.Mesh(geometry, material);
         this.laserBeam.visible = false;
     }
 
+    setupParticles() {
+        this.particleCount = 50;
+        this.particlesData = [];
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(this.particleCount * 3);
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const material = new THREE.PointsMaterial({
+            color: 0xaaaaaa,
+            size: 0.8,
+            map: null, // Could add a texture
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        this.particleSystem = new THREE.Points(geometry, material);
+        this.game.scene.add(this.particleSystem);
+
+        // Init data
+        for (let i = 0; i < this.particleCount; i++) {
+            this.particlesData.push({
+                active: false,
+                velocity: new THREE.Vector3(),
+                life: 0
+            });
+            // Move off screen
+            positions[i * 3] = 99999;
+            positions[i * 3 + 1] = 99999;
+            positions[i * 3 + 2] = 99999;
+        }
+    }
+
+    spawnParticle(position, target) {
+        // Find inactive particle
+        const idx = this.particlesData.findIndex(p => !p.active);
+        if (idx === -1) return;
+
+        const p = this.particlesData[idx];
+        p.active = true;
+        p.life = 1.0;
+
+        const posAttr = this.particleSystem.geometry.attributes.position;
+        posAttr.setXYZ(idx, position.x, position.y, position.z);
+
+        // Velocity towards target (ship)
+        p.velocity.subVectors(target, position).normalize().multiplyScalar(20 + Math.random() * 30);
+
+        // Add some random scatter
+        p.velocity.x += (Math.random() - 0.5) * 5;
+        p.velocity.y += (Math.random() - 0.5) * 5;
+        p.velocity.z += (Math.random() - 0.5) * 5;
+    }
+
+    updateParticles(delta) {
+        const posAttr = this.particleSystem.geometry.attributes.position;
+        let needsUpdate = false;
+
+        const shipPos = this.game.playerShip.mesh.position;
+
+        for (let i = 0; i < this.particleCount; i++) {
+            const p = this.particlesData[i];
+            if (!p.active) continue;
+
+            p.life -= delta;
+            if (p.life <= 0) {
+                p.active = false;
+                posAttr.setXYZ(i, 99999, 99999, 99999);
+                needsUpdate = true;
+                continue;
+            }
+
+            // Move particle
+            const x = posAttr.getX(i) + p.velocity.x * delta;
+            const y = posAttr.getY(i) + p.velocity.y * delta;
+            const z = posAttr.getZ(i) + p.velocity.z * delta;
+
+            posAttr.setXYZ(i, x, y, z);
+
+            // Attract to ship
+            const dist = new THREE.Vector3(x, y, z).distanceTo(shipPos);
+            if (dist < 5) { // Collected
+                p.active = false;
+                posAttr.setXYZ(i, 99999, 99999, 99999);
+            }
+
+            needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+            posAttr.needsUpdate = true;
+        }
+    }
+
     update(delta) {
         if (!this.game.playerShip) return;
+
+        this.updateParticles(delta);
 
         // Ensure laser is attached to ship
         if (this.laserBeam.parent !== this.game.playerShip.mesh) {
@@ -44,7 +155,40 @@ export class MiningManager {
         // Input: 'KeyZ' for mining laser
         const firing = this.game.keys['KeyZ'];
 
-        if (firing) {
+        // Heat Logic
+        if (firing && !this.overheated) {
+            this.heat += this.heatRate * delta;
+            if (this.heat >= this.maxHeat) {
+                this.heat = this.maxHeat;
+                this.overheated = true;
+                this.game.audioManager.playError();
+                this.statusText.innerText = "OVERHEATED";
+                this.statusText.classList.add('blink', 'warning');
+                this.laserBeam.visible = false; // Cut off laser
+            }
+        } else {
+            this.heat -= this.coolRate * delta;
+            if (this.heat <= 0) {
+                this.heat = 0;
+                if (this.overheated) {
+                    this.overheated = false;
+                    this.statusText.innerText = "READY";
+                    this.statusText.classList.remove('blink', 'warning');
+                    this.game.audioManager.playUIBeep();
+                }
+            }
+        }
+
+        // Update UI
+        if (this.heat > 0 || firing) {
+            this.hud.classList.remove('hidden');
+            this.heatBar.style.width = `${(this.heat / this.maxHeat) * 100}%`;
+        } else {
+            this.hud.classList.add('hidden');
+        }
+
+        // Firing Logic
+        if (firing && !this.overheated) {
             this.fireLaser(delta);
         } else {
             this.laserBeam.visible = false;
@@ -89,15 +233,20 @@ export class MiningManager {
             beamLength = dist;
 
             // Mine logic
-            this.mineTarget(hit.field, hit.instanceId, hit.asteroid, delta);
+            this.mineTarget(hit.field, hit.instanceId, hit.asteroid, delta, hit.point);
         }
 
         // Align and scale beam
         this.laserBeam.scale.set(1, 1, beamLength);
     }
 
-    mineTarget(field, instanceId, asteroid, delta) {
+    mineTarget(field, instanceId, asteroid, delta, hitPoint) {
         this.miningTimer += delta;
+
+        // Visual FX
+        if (Math.random() < 0.3) {
+            this.spawnParticle(hitPoint, this.game.playerShip.mesh.position);
+        }
 
         if (this.miningTimer >= this.miningRate) {
             this.miningTimer = 0;
@@ -110,6 +259,12 @@ export class MiningManager {
 
                 if (asteroid.amount <= 0) {
                     field.destroyAsteroid(instanceId);
+                    this.game.audioManager.playExplosion();
+                }
+            } else {
+                // Cargo full feedback?
+                if (Math.random() < 0.05) {
+                    // this.game.ui.showMessage("Cargo Full!");
                 }
             }
         }

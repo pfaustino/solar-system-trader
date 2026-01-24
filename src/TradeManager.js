@@ -6,6 +6,10 @@ export class TradeManager {
         this.basePrices = new Map();
         this.prices = new Map(); // Map<locationId, Map<commodityId, price>>
         this.lastKnownPrices = new Map(); // Map<locationId, Map<commodityId, {price, timestamp}>>
+
+        // Simulation
+        this.marketTimer = 0;
+        this.TICK_RATE = 5.0; // Update every 5 seconds
     }
 
     init() {
@@ -16,9 +20,110 @@ export class TradeManager {
 
         // Generate initial prices for all locations
         this.regeneratePrices();
+    }
 
-        // Populate "Public Knowledge" (Earth/Luna) for Lvl 1 Computer
-        // We will do this lazily or in update logic
+    update(delta) {
+        if (!this.prices.size) return;
+
+        this.marketTimer += delta;
+        if (this.marketTimer >= this.TICK_RATE) {
+            this.marketTimer = 0;
+            this.processMarketTick();
+        }
+    }
+
+    processMarketTick() {
+        // console.log("Market Simulation Tick");
+        const locs = this.game.locationsData.locations;
+
+        locs.forEach(loc => {
+            const locPrices = this.prices.get(loc.id);
+            if (!locPrices) return;
+
+            // Random Event?
+            if (Math.random() < 0.05) { // 5% chance per location per tick
+                this.triggerRandomEvent(loc, locPrices);
+            }
+
+            this.basePrices.forEach((item, itemId) => {
+                let price = locPrices.get(itemId);
+                if (!price) return; // Should exist
+
+                // 1. Calculate Target Price (The "Natural" price)
+                let target = item.basePrice;
+                if (loc.imports.includes(itemId) || loc.imports.includes('everything')) {
+                    target *= 1.5; // High demand natural state
+                }
+                if (loc.exports.includes(itemId)) {
+                    target *= 0.5; // High supply natural state
+                }
+
+                // Distance premium
+                if (item.category !== 'basic') {
+                    target += (loc.dangerLevel * 0.1 * item.basePrice);
+                }
+
+                // 2. Normalization (Drift back to natural price)
+                // This counters player manipulation over time
+                const diff = target - price;
+                // Move 10% of the difference, or at least 1 unit if far enough
+                // This is exponential decay of the deviation
+                if (Math.abs(diff) > 1) {
+                    price += diff * 0.1;
+                }
+
+                // 3. Random Fluctuation (Noise)
+                // +/- 2%
+                const noise = (Math.random() - 0.5) * 0.04;
+                price *= (1.0 + noise);
+
+                // 4. NPC Trade Simulation (Abstract)
+                // Randomly supply increases or demand spikes
+                if (Math.random() < 0.1) {
+                    // Small trade occurred
+                    // If export, likely being sold (price up?) or produced (price down?)
+                    // Let's sim: 50% chance supply arrives, 50% demand spikes
+                    const tradeDir = Math.random() > 0.5 ? 1 : -1;
+                    price *= (1 + (tradeDir * 0.03));
+                }
+
+                // Clamp
+                if (price < 1) price = 1;
+
+                locPrices.set(itemId, Math.ceil(price));
+            });
+        });
+
+        // If docked, refresh UI
+        if (this.game.dockedAt) {
+            this.game.updateStationUI();
+        }
+    }
+
+    triggerRandomEvent(loc, locPrices) {
+        const itemIds = Array.from(this.basePrices.keys());
+        const itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+        const item = this.basePrices.get(itemId);
+        const current = locPrices.get(itemId);
+
+        // Types: Bumper Crop (Price Crash), Shortage (Price Spike), New Contract (Demand Spike)
+        const type = Math.random();
+
+        if (type < 0.3) {
+            // Surplus / Glut
+            locPrices.set(itemId, Math.ceil(current * 0.7));
+            const msg = `EVENT: ${loc.name} reports massive surplus of ${item.name}! Prices plummet.`;
+            console.log(msg);
+            this.game.showMessage(msg, 'info');
+        } else if (type < 0.6) {
+            // Shortage
+            locPrices.set(itemId, Math.ceil(current * 1.5));
+            const msg = `EVENT: ${loc.name} reports shortage of ${item.name}! Prices skyrocket.`;
+            console.log(msg);
+            this.game.showMessage(msg, 'warning');
+        } else {
+            // Normal fluctuation
+        }
     }
 
     recordPrices(locationId) {
@@ -63,9 +168,6 @@ export class TradeManager {
 
         // Level 1+: Memory + Public Info (Earth/Luna always known)
         if (locationId === 'earth' || locationId === 'luna') {
-            // Always return real-time for core worlds (or maybe just last known if we want to be strict? User said "Earth/Luna Prices unlock")
-            // Let's assume Real-time for them or just "Known"
-            // "Unlocks... Earth/Luna Prices" -> Implies knowledge.
             const rtPrice = this.prices.get(locationId)?.get(commodityId);
             if (rtPrice) return { price: rtPrice, isLive: true }; // Treat as live feed
         }
@@ -97,19 +199,8 @@ export class TradeManager {
                 const variance = (Math.random() * 2 - 1) * item.volatility;
                 multiplier += variance;
 
-                // Market Events (Random Booms/Crashes)
-                if (Math.random() < 0.05) { // 5% chance per item
-                    if (Math.random() > 0.5) {
-                        multiplier *= 2.0; // Shortage! Price doubles
-                        console.log(`Shortage of ${item.name} at ${loc.name}`);
-                    } else {
-                        multiplier *= 0.3; // Surplus! Fire sale
-                        console.log(`Surplus of ${item.name} at ${loc.name}`);
-                    }
-                }
-
-                // Distance/Risk factor (Outer system is generally more expensive/profitable)
-                const distanceMult = loc.dangerLevel * 0.1; // Increased risk premium
+                // Distance/Risk factor
+                const distanceMult = loc.dangerLevel * 0.1;
                 if (item.category !== 'basic') {
                     multiplier += distanceMult;
                 }
@@ -123,7 +214,7 @@ export class TradeManager {
             this.prices.set(loc.id, locPrices);
         }
 
-        console.log('Prices regenerated for new day');
+        console.log('Prices regenerated.');
     }
 
     getPrice(locationId, commodityId) {
@@ -149,7 +240,7 @@ export class TradeManager {
             // Supply/Demand: Buying reduces supply -> Price Increases
             // Sensitivity: 2% per unit
             let newPrice = Math.ceil(price * (1 + (quantity * 0.02)));
-            // Cap at 5x base price? Or just let it run wild? Let's cap slightly.
+            // Cap at 10x base price
             const item = this.basePrices.get(commodityId);
             if (item && newPrice > item.basePrice * 10) newPrice = item.basePrice * 10;
 

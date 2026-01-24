@@ -380,6 +380,11 @@ class Main {
 
         // Render with post-processing
         this.composer.render();
+
+        // Post-render (UI 3D elements)
+        if (this.game && this.game.postRender) {
+            this.game.postRender();
+        }
     }
 }
 
