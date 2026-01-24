@@ -1,0 +1,59 @@
+{
+    "ships": [
+        {
+            "id": "alpha",
+            "name": "Alpha",
+            "model": "Spaceship0.glb",
+            "role": "starter",
+            "cargo": 20,
+            "speed": 4,
+            "combat": 1,
+            "cost": 0,
+            "description": "Basic starter ship. Reliable but limited."
+        },
+        {
+            "id": "bravo",
+            "name": "Bravo",
+            "model": "Spaceship1.glb",
+            "role": "hauler",
+            "cargo": 100,
+            "speed": 2,
+            "combat": 1,
+            "cost": 15000,
+            "description": "Massive cargo capacity. Slow and vulnerable."
+        },
+        {
+            "id": "charlie",
+            "name": "Charlie",
+            "model": "Spaceship2.glb",
+            "role": "combat",
+            "cargo": 30,
+            "speed": 3,
+            "combat": 4,
+            "cost": 40000,
+            "description": "Built for battle. Pirates beware."
+        },
+        {
+            "id": "delta",
+            "name": "Delta",
+            "model": "Spaceship3.glb",
+            "role": "balanced",
+            "cargo": 50,
+            "speed": 3,
+            "combat": 2,
+            "cost": 25000,
+            "description": "Jack of all trades. Good all-rounder."
+        },
+        {
+            "id": "echo",
+            "name": "Echo",
+            "model": "Spaceship4.glb",
+            "role": "endgame",
+            "cargo": 80,
+            "speed": 3,
+            "combat": 4,
+            "cost": 100000,
+            "description": "The ultimate vessel. Master of the system."
+        }
+    ]
+}

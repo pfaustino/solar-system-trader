@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Trader</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div id="credits">Credits: <span id="credits-value">1000</span></div>
+            <div id="cargo">Cargo: <span id="cargo-value">0</span>/<span id="cargo-max">20</span></div>
+            <div id="location">Location: <span id="location-value">Earth Orbital</span></div>
+        </div>
+
+        <!-- Speed indicator -->
+        <div id="speed-indicator">
+            <span id="speed-value">0</span> km/s
+        </div>
+
+        <!-- Target info -->
+        <div id="target-info" class="hidden">
+            <div id="target-name"></div>
+            <div id="target-distance"></div>
+        </div>
+
+        <!-- Radar -->
+        <div id="radar">
+            <div id="radar-center"></div>
+        </div>
+
+        <!-- 3D Waypoints Container -->
+        <div id="waypoints"></div>
+
+        <!-- Crosshair -->
+        <div id="crosshair">+</div>
+
+        <!-- Loading screen -->
+        <div id="loading-screen">
+            <div class="loading-content">
+                <h1>SOLAR SYSTEM TRADER</h1>
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+                <p id="loading-text">Loading assets...</p>
+            </div>
+        </div>
+
+        <!-- Station UI -->
+        <div id="station-ui" class="hidden">
+            <div class="panel">
+                <div class="station-header">
+                    <h2 id="station-name">Station Name</h2>
+                    <button id="close-station-btn" class="btn">UNDOCK</button>
+                </div>
+
+                <div class="station-content">
+                    <div class="trade-column">
+                        <h3>MARKET</h3>
+                        <div id="market-list" class="scroll-list">
+                            <!-- Items go here -->
+                        </div>
+                    </div>
+
+                    <div class="ship-column">
+                        <h3>SHIP STATUS</h3>
+                        <div class="stat-row">
+                            <span>Credits:</span>
+                            <span id="ui-credits">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Cargo:</span>
+                            <span id="ui-cargo">0/20</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Fuel:</span>
+                            <span id="ui-fuel">100%</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Hull:</span>
+                            <span id="ui-hull">100%</span>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="refuel-btn" class="btn">Refuel (10cr)</button>
+                            <button id="repair-btn" class="btn">Repair (50cr)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Docking Prompt -->
+        <div id="dock-prompt" class="hidden">
+            PRESS [F] TO DOCK
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="src/main.js"></script>
+</body>
+
+</html>

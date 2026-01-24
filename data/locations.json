@@ -1,0 +1,254 @@
+{
+    "locations": [
+        {
+            "id": "mercury",
+            "name": "Mercury Station",
+            "type": "mining",
+            "position": {
+                "x": 800,
+                "y": 0,
+                "z": 0
+            },
+            "dangerLevel": 1,
+            "exports": [
+                "rare_metals"
+            ],
+            "imports": [
+                "water",
+                "food"
+            ],
+            "description": "Solar-powered mining outpost. Extreme heat."
+        },
+        {
+            "id": "venus",
+            "name": "Venus Cloud City",
+            "type": "refinery",
+            "position": {
+                "x": 1200,
+                "y": 200,
+                "z": 100
+            },
+            "dangerLevel": 1,
+            "exports": [
+                "chemicals",
+                "fuel"
+            ],
+            "imports": [
+                "electronics"
+            ],
+            "description": "Floating platforms above the acid clouds."
+        },
+        {
+            "id": "earth",
+            "name": "Earth Orbital",
+            "type": "hub",
+            "position": {
+                "x": 1600,
+                "y": 0,
+                "z": -50
+            },
+            "dangerLevel": 0,
+            "exports": [
+                "luxury_goods"
+            ],
+            "imports": [
+                "ore",
+                "food",
+                "fuel",
+                "electronics"
+            ],
+            "description": "Humanity's home. Central trading hub."
+        },
+        {
+            "id": "luna",
+            "name": "Luna Base",
+            "type": "industrial",
+            "position": {
+                "x": 1650,
+                "y": 50,
+                "z": 0
+            },
+            "dangerLevel": 0,
+            "exports": [
+                "electronics"
+            ],
+            "imports": [
+                "ore",
+                "food"
+            ],
+            "description": "Industrial complex on Earth's moon."
+        },
+        {
+            "id": "mars",
+            "name": "Mars Colony",
+            "type": "settlement",
+            "position": {
+                "x": 2200,
+                "y": -100,
+                "z": 200
+            },
+            "dangerLevel": 1,
+            "exports": [
+                "food"
+            ],
+            "imports": [
+                "machinery",
+                "electronics"
+            ],
+            "description": "Terraforming in progress. Growing population."
+        },
+        {
+            "id": "asteroid_belt",
+            "name": "Asteroid Belt Depot",
+            "type": "mining",
+            "position": {
+                "x": 3500,
+                "y": 0,
+                "z": 0
+            },
+            "dangerLevel": 3,
+            "exports": [
+                "ore",
+                "ice"
+            ],
+            "imports": [
+                "equipment",
+                "food"
+            ],
+            "description": "Lawless mining zone. Watch for pirates."
+        },
+        {
+            "id": "jupiter",
+            "name": "Jupiter Station",
+            "type": "gas_harvest",
+            "position": {
+                "x": 5000,
+                "y": 300,
+                "z": -200
+            },
+            "dangerLevel": 2,
+            "exports": [
+                "fuel",
+                "gases"
+            ],
+            "imports": [
+                "luxury_goods",
+                "food"
+            ],
+            "description": "Gas giant harvesting operation."
+        },
+        {
+            "id": "europa",
+            "name": "Europa Outpost",
+            "type": "research",
+            "position": {
+                "x": 5100,
+                "y": 250,
+                "z": -150
+            },
+            "dangerLevel": 2,
+            "exports": [
+                "bio_samples"
+            ],
+            "imports": [
+                "equipment",
+                "medicine"
+            ],
+            "description": "Subsurface ocean research facility."
+        },
+        {
+            "id": "saturn",
+            "name": "Saturn Rings",
+            "type": "mining",
+            "position": {
+                "x": 7000,
+                "y": -200,
+                "z": 400
+            },
+            "dangerLevel": 3,
+            "exports": [
+                "ice",
+                "crystals"
+            ],
+            "imports": [
+                "food",
+                "medicine"
+            ],
+            "description": "Mining operations in the ring system."
+        },
+        {
+            "id": "titan",
+            "name": "Titan Refinery",
+            "type": "industrial",
+            "position": {
+                "x": 7200,
+                "y": -150,
+                "z": 450
+            },
+            "dangerLevel": 3,
+            "exports": [
+                "hydrocarbons",
+                "fuel"
+            ],
+            "imports": [
+                "machinery"
+            ],
+            "description": "Hydrocarbon lakes fuel the outer system."
+        },
+        {
+            "id": "uranus",
+            "name": "Uranus Platform",
+            "type": "remote",
+            "position": {
+                "x": 10000,
+                "y": 100,
+                "z": -500
+            },
+            "dangerLevel": 4,
+            "exports": [
+                "exotic_gases"
+            ],
+            "imports": [
+                "medicine",
+                "food"
+            ],
+            "description": "Remote outpost. Exotic gas extraction."
+        },
+        {
+            "id": "neptune",
+            "name": "Neptune Haven",
+            "type": "smuggler",
+            "position": {
+                "x": 12000,
+                "y": -300,
+                "z": 600
+            },
+            "dangerLevel": 5,
+            "exports": [
+                "contraband"
+            ],
+            "imports": [
+                "weapons"
+            ],
+            "description": "Smuggler's paradise. No questions asked."
+        },
+        {
+            "id": "pluto",
+            "name": "Pluto Station",
+            "type": "edge",
+            "position": {
+                "x": 15000,
+                "y": 500,
+                "z": -800
+            },
+            "dangerLevel": 4,
+            "exports": [
+                "artifacts"
+            ],
+            "imports": [
+                "everything"
+            ],
+            "description": "Edge of known space. High demand for all goods."
+        }
+    ]
+}

@@ -1,0 +1,169 @@
+{
+    "commodities": [
+        {
+            "id": "food",
+            "name": "Food",
+            "category": "basic",
+            "basePrice": 20,
+            "volatility": 0.1,
+            "legal": true
+        },
+        {
+            "id": "water",
+            "name": "Water",
+            "category": "basic",
+            "basePrice": 15,
+            "volatility": 0.1,
+            "legal": true
+        },
+        {
+            "id": "medicine",
+            "name": "Medicine",
+            "category": "basic",
+            "basePrice": 50,
+            "volatility": 0.2,
+            "legal": true
+        },
+        {
+            "id": "ore",
+            "name": "Raw Ore",
+            "category": "industrial",
+            "basePrice": 10,
+            "volatility": 0.3,
+            "legal": true,
+            "mineable": true
+        },
+        {
+            "id": "rare_metals",
+            "name": "Rare Metals",
+            "category": "industrial",
+            "basePrice": 80,
+            "volatility": 0.4,
+            "legal": true,
+            "mineable": true
+        },
+        {
+            "id": "machinery",
+            "name": "Machinery",
+            "category": "industrial",
+            "basePrice": 100,
+            "volatility": 0.25,
+            "legal": true
+        },
+        {
+            "id": "electronics",
+            "name": "Electronics",
+            "category": "industrial",
+            "basePrice": 120,
+            "volatility": 0.3,
+            "legal": true
+        },
+        {
+            "id": "fuel",
+            "name": "Fuel",
+            "category": "energy",
+            "basePrice": 30,
+            "volatility": 0.35,
+            "legal": true
+        },
+        {
+            "id": "gases",
+            "name": "Industrial Gases",
+            "category": "energy",
+            "basePrice": 45,
+            "volatility": 0.3,
+            "legal": true
+        },
+        {
+            "id": "exotic_gases",
+            "name": "Exotic Gases",
+            "category": "energy",
+            "basePrice": 150,
+            "volatility": 0.5,
+            "legal": true,
+            "mineable": true
+        },
+        {
+            "id": "ice",
+            "name": "Ice",
+            "category": "industrial",
+            "basePrice": 12,
+            "volatility": 0.2,
+            "legal": true,
+            "mineable": true
+        },
+        {
+            "id": "crystals",
+            "name": "Crystals",
+            "category": "luxury",
+            "basePrice": 200,
+            "volatility": 0.4,
+            "legal": true,
+            "mineable": true
+        },
+        {
+            "id": "luxury_goods",
+            "name": "Luxury Goods",
+            "category": "luxury",
+            "basePrice": 250,
+            "volatility": 0.5,
+            "legal": true
+        },
+        {
+            "id": "bio_samples",
+            "name": "Bio Samples",
+            "category": "luxury",
+            "basePrice": 180,
+            "volatility": 0.6,
+            "legal": true
+        },
+        {
+            "id": "artifacts",
+            "name": "Artifacts",
+            "category": "luxury",
+            "basePrice": 500,
+            "volatility": 0.7,
+            "legal": true
+        },
+        {
+            "id": "hydrocarbons",
+            "name": "Hydrocarbons",
+            "category": "energy",
+            "basePrice": 60,
+            "volatility": 0.3,
+            "legal": true
+        },
+        {
+            "id": "chemicals",
+            "name": "Chemicals",
+            "category": "industrial",
+            "basePrice": 40,
+            "volatility": 0.25,
+            "legal": true
+        },
+        {
+            "id": "equipment",
+            "name": "Equipment",
+            "category": "industrial",
+            "basePrice": 70,
+            "volatility": 0.2,
+            "legal": true
+        },
+        {
+            "id": "weapons",
+            "name": "Weapons",
+            "category": "contraband",
+            "basePrice": 300,
+            "volatility": 0.6,
+            "legal": false
+        },
+        {
+            "id": "contraband",
+            "name": "Contraband",
+            "category": "contraband",
+            "basePrice": 400,
+            "volatility": 0.8,
+            "legal": false
+        }
+    ]
+}
