@@ -1,0 +1,9 @@
+{
+  "version": "0.1.0",
+  "tuning": {
+    "playerSpeed": 1.0,
+    "enemyHpMult": 1.0,
+    "spawnRateMult": 1.0
+  },
+  "notes": "Move balance numbers here; keep code as applicators only."
+}
