@@ -1,0 +1,16 @@
+---
+description: Core agent behavior — verify, minimal diffs, no secrets
+alwaysApply: true
+---
+
+# Core development norms
+
+- Ask for clarification when scope or requirements are unclear.
+- Implement only what was discussed; no scaffold or demo code unless asked.
+- Preserve existing comments; add comments only for non-obvious logic.
+- Match project naming, patterns, and formatter/linter configs.
+- Minimal diffs — touch only lines needed for the request.
+- Run the quality gate before commit/push; fix lint errors and warnings.
+- Never paste secrets, API keys, or `.env` contents into chat.
+- Do not commit unless the user explicitly asks.
+- Agent runs terminal commands (`git`, `npm`, `gh`) — does not only print them.

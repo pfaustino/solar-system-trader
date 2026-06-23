@@ -23,6 +23,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run check --if-present
       - run: npm run lint --if-present
       - run: npm run typecheck --if-present
       - run: npm test --if-present

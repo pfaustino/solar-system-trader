@@ -1,0 +1,22 @@
+# Secrets and credentials — never index for AI context
+.env
+.env.*
+**/credentials*
+**/*secret*
+*.pem
+*.pfx
+
+# VCS and dependencies
+**/.git/
+**/node_modules/
+
+# Build outputs and caches
+dist/
+build/
+coverage/
+.nyc_output/
+*.log
+
+# Large exports and binaries (adjust per project)
+large-exports/
+public/images/pixabay-*.jpg

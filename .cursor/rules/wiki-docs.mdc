@@ -1,0 +1,21 @@
+---
+description: Wiki and architecture docs live in the git repo, not the GitHub Wiki UI
+alwaysApply: true
+---
+
+# Wiki and documentation
+
+## Source of truth
+
+- Edit `ARCHITECTURE.md` and `docs/adr/` in the repo.
+- Sync to `wiki/` before commit: `Sync-WikiFolder <repo-path>` or `_devkit\sync-wiki-folder.ps1`.
+- CI (`sync-wiki.yml`) publishes `wiki/` to GitHub Wiki on merge to `main`.
+
+## Do not
+
+- Edit wiki pages only in the GitHub Wiki UI — automation overwrites them on merge.
+- Store secrets or live credentials in wiki markdown.
+
+## After structural changes
+
+Update `ARCHITECTURE.md`, ADRs, run wiki sync, commit `wiki/**` with code changes.

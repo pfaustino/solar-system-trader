@@ -1,0 +1,33 @@
+---
+description: GitHub branch, PR, and merge workflow
+alwaysApply: true
+---
+
+# GitHub workflow
+
+## Branches
+
+- `git pull` on `main` before starting work.
+- Branch names: `feat/short-description`, `fix/...`, `chore/...`.
+- Never force-push to `main`.
+
+## Changes ship via PR
+
+- Push branch → `gh pr create` (or GitHub UI).
+- Wait for CI (Actions tab) before merge.
+- Do not merge blind reruns — read failed job logs first.
+- Agent does not push to `main` unless the user explicitly asks.
+
+## Commits
+
+- Format: `type(scope): what and why` (e.g. `fix(combat): cap despawn batch`).
+- Never commit: `.env`, keys, `*credentials*`, large binary dumps.
+
+## Sensitive paths
+
+- Respect `CODEOWNERS` when present.
+- Production secrets live in GitHub Environments (admins only).
+
+## CLI
+
+Use `gh` for PRs, checks, issues — always approved for this account (`pfaustino`).

@@ -1,0 +1,42 @@
+---
+description: PowerShell and script automation patterns for Windows dev
+globs: "**/*.{ps1,bat,cmd,sh}"
+alwaysApply: false
+---
+
+# Script automation
+
+## Run, don't suggest
+
+Execute scripts and builds in the terminal. Report exit codes and stderr.
+
+## PowerShell from CMD
+
+If `.ps1` opens in the editor from CMD, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\script.ps1
+```
+
+Prefer `.bat` wrappers for double-click or CMD callers.
+
+## Exit codes
+
+- Verify scripts exit `0` on success.
+- On failure, show the command output — do not claim success.
+
+## Devkit scripts
+
+Root: `%GITHUB_PROJECTS%\_devkit\` (or `C:\Dev\github-projects\_devkit`).
+
+| Script | Purpose |
+|--------|---------|
+| `sync-wiki-folder.ps1` | Copy ARCHITECTURE → `wiki/` |
+| `apply-cursor-pack.ps1` | Install Cursor rules + ignore |
+| `apply-security-kit.ps1` | CodeQL + Dependabot workflows |
+| `enable-repo-security.ps1` | Dependabot alerts via API |
+
+## Game verify
+
+- Node games: `npm run check` (or `gcheck <repo>`).
+- Python: `python -m ruff check .` and `pytest -q`.
