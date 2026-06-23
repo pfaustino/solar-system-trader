@@ -1,0 +1,27 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ARCHITECTURE.md
+      - docs/adr/**
+      - wiki/**
+      - .github/workflows/sync-wiki.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publish wiki folder
+        uses: Andrew-Chen-Wang/github-wiki-action@v5
+        with:
+          path: wiki
+          strategy: init
